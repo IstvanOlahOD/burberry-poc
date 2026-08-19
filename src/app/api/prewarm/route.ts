@@ -38,6 +38,20 @@ const LIST_CACHE = "public, max-age=0, s-maxage=60";
 const COARSE_STRIDE = 6;
 
 /**
+ * How much of each turntable the `variants` scope covers. A stride of 6 gives
+ * the twelve frames the viewer warms first; 1 covers all 72. Constrained to an
+ * allowlist so the parameter cannot be used to mint unbounded URL sets.
+ */
+const ALLOWED_STRIDES = [1, 2, 3, 4, 6, 8, 12, 24];
+
+/** Resolutions the variants scope may be asked for, matching `srcSet`. */
+const ALLOWED_SIZE_SETS: Record<string, number[]> = {
+  "720": [VIEWER_SIZE],
+  "1440": [VIEWER_SIZE_RETINA],
+  "720,1440": [VIEWER_SIZE, VIEWER_SIZE_RETINA],
+};
+
+/**
  * Each combination the picker can reach. Optional parts contribute an extra
  * "unset" state, which is why this is larger than the colour counts suggest.
  */
@@ -91,14 +105,14 @@ function deployScope(): string[] {
   return urls;
 }
 
-function variantScope(): string[] {
+function variantScope(stride: number, sizes: number[]): string[] {
   const urls: string[] = [];
 
   for (const parts of allConfigurations()) {
-    for (let frame = 0; frame < FRAME_COUNT; frame += COARSE_STRIDE) {
-      urls.push(
-        composeUrl({ parts, frame: frameName(frame), size: VIEWER_SIZE }),
-      );
+    for (let frame = 0; frame < FRAME_COUNT; frame += stride) {
+      for (const size of sizes) {
+        urls.push(composeUrl({ parts, frame: frameName(frame), size }));
+      }
     }
     for (const frame of THUMBNAIL_FRAMES) {
       urls.push(composeUrl({ parts, frame, size: THUMBNAIL_SIZE }));
@@ -107,23 +121,43 @@ function variantScope(): string[] {
   return urls;
 }
 
+function reject(reason: string): Response {
+  return new Response(reason, {
+    status: 400,
+    headers: { "cache-control": "no-store" },
+  });
+}
+
 export async function GET(request: Request): Promise<Response> {
-  const scope = new URL(request.url).searchParams.get("scope") ?? "deploy";
+  const params = new URL(request.url).searchParams;
+  const scope = params.get("scope") ?? "deploy";
 
   if (scope !== "deploy" && scope !== "variants") {
-    return new Response("scope must be 'deploy' or 'variants'", {
-      status: 400,
-      headers: { "cache-control": "no-store" },
-    });
+    return reject("scope must be 'deploy' or 'variants'");
   }
 
-  const urls = scope === "variants" ? variantScope() : deployScope();
+  const stride = Number(params.get("stride") ?? COARSE_STRIDE);
+  if (!ALLOWED_STRIDES.includes(stride)) {
+    return reject(`stride must be one of ${ALLOWED_STRIDES.join(", ")}`);
+  }
+
+  const sizeKey = params.get("sizes") ?? String(VIEWER_SIZE);
+  const sizes = ALLOWED_SIZE_SETS[sizeKey];
+  if (!sizes) {
+    return reject(
+      `sizes must be one of ${Object.keys(ALLOWED_SIZE_SETS).join(" | ")}`,
+    );
+  }
+
+  const urls =
+    scope === "variants" ? variantScope(stride, sizes) : deployScope();
 
   return Response.json(
     {
       scope,
       revision: RENDER_REVISION,
       configurations: scope === "variants" ? allConfigurations().length : 1,
+      ...(scope === "variants" ? { stride, sizes } : {}),
       count: urls.length,
       urls,
     },

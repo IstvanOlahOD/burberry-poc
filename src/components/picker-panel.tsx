@@ -52,19 +52,19 @@ export function PickerPanel({
                   type="button"
                   onClick={() => onSelectPart(part.name)}
                   aria-pressed={isActive}
-                  className="flex items-center p-4 leading-none"
+                  className="group flex items-center p-4 leading-none"
                 >
                   <span
-                    className={`text-[14px] font-medium transition-colors ${
-                      isActive ? "text-ink" : "text-muted"
+                    className={`text-[14px] font-medium transition-colors duration-100 ease-in-out group-hover:text-[#151515] ${
+                      isActive ? "text-[#151515]" : "text-muted"
                     }`}
                   >
                     {selection || !part.optional ? part.label : `No ${part.label}`}
                   </span>
                   {selection ? (
                     <span
-                      className={`ml-2 inline-block size-[13px] overflow-hidden rounded-full border transition-colors ${
-                        isActive ? "border-ink" : "border-swatch-ring"
+                      className={`ml-2 inline-block size-[13px] overflow-hidden rounded-full border transition-colors duration-100 ease-in-out group-hover:border-swatch-ring ${
+                        isActive ? "border-swatch-ring" : "border-[#9299a3]"
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- remote swatch render. */}
@@ -100,7 +100,7 @@ export function PickerPanel({
                         color: material.colors[0].name,
                       })
                     }
-                    className={`text-[12px] font-medium ${
+                    className={`text-[12px] font-medium transition-colors duration-100 ease-in-out hover:text-ink ${
                       material.name === currentMaterial?.name ? "text-ink" : "text-muted"
                     }`}
                   >

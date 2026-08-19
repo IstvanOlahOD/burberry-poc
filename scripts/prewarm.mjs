@@ -29,6 +29,12 @@ const BASE = (
 
 const SCOPE = process.argv[3] || process.env.SCOPE || "deploy";
 
+/** variants only: 6 covers a twelfth of each turn, 1 covers every frame. */
+const STRIDE = process.env.STRIDE || "";
+
+/** variants only: "720", "1440" or "720,1440". */
+const SIZES = process.env.SIZES || "";
+
 /** Matches the client's warm pool; the render service multiplexes these fine. */
 const CONCURRENCY = Number(process.env.CONCURRENCY || 6);
 
@@ -50,7 +56,10 @@ async function fetchWarmList() {
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${BASE}/api/prewarm?scope=${SCOPE}`, {
+      const query = new URLSearchParams({ scope: SCOPE });
+      if (STRIDE) query.set("stride", STRIDE);
+      if (SIZES) query.set("sizes", SIZES);
+      const response = await fetch(`${BASE}/api/prewarm?${query}`, {
         cache: "no-store",
       });
       if (response.ok) return await response.json();

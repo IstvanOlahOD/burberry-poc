@@ -19,6 +19,17 @@
   --font-sans: var(--font-roboto);
 }
 
+/* Tailwind v4's reset drops the browser default of `cursor: pointer` on
+   buttons, so it is restored here rather than repeated across every control.
+   Disabled buttons keep the default arrow, which is what the undo/redo and
+   start-over icons rely on to read as unavailable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 html,
 body {
   height: 100%;
