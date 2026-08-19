@@ -5,6 +5,12 @@ name: Pre-warm render cache
 on:
   deployment_status:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: "deploy (landing config) or variants (all filter combinations, one-time)"
+        type: choice
+        default: deploy
+        options: [deploy, variants]
 
 jobs:
   prewarm:
@@ -15,6 +21,8 @@ jobs:
       (github.event.deployment_status.state == 'success' &&
        github.event.deployment_status.environment == 'Production')
     runs-on: ubuntu-latest
+    # The variants scope walks thousands of URLs.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -25,4 +33,6 @@ jobs:
       # Warms the production alias rather than the deployment URL: cache keys
       # include the host, and the alias is what visitors actually hit.
       - name: Warm the cache
-        run: node scripts/prewarm.mjs https://burberry-poc.vercel.app
+        env:
+          SCOPE: ${{ github.event.inputs.scope || 'deploy' }}
+        run: node scripts/prewarm.mjs https://burberry-poc.vercel.app "$SCOPE"

@@ -122,42 +122,68 @@ Note that render *time* upstream is almost independent of the requested size
 (~715ms at 250px vs ~938ms at 2000px), so right-sizing buys bytes and decode
 time, not a faster cold render.
 
-## Pre-warming after deploy
+## Durable render store
 
-Vercel's CDN cache is scoped to a deployment, so every production deploy starts
-cold and whoever arrives first pays the upstream render — ~830ms a frame, 72
-frames to a turntable.
+Vercel's CDN cache is scoped to a deployment, so on its own every deploy re-pays
+the upstream render — ~830ms a frame plus a transcode — for every image anyone
+looks at.
 
-[`.github/workflows/prewarm.yml`](.github/workflows/prewarm.yml) runs on the
-`deployment_status` event, once Vercel reports a successful production deploy,
-and walks the default configuration so the cache is warm before anyone looks.
+[`src/lib/render-store.ts`](src/lib/render-store.ts) keeps finished renders in
+Vercel Blob, which outlives deployments. A render is produced once and afterwards
+read from storage. Keys are content-addressed: the upstream URL fully determines
+the bytes, so it is hashed, under a `renders/v{REVISION}/` prefix so a revision
+bump starts a clean namespace rather than colliding with superseded encodings.
 
-[`scripts/prewarm.mjs`](scripts/prewarm.mjs) does the work — plain Node, no
-dependencies. It asks [`/api/prewarm`](src/app/api/prewarm/route.ts) what to
-fetch rather than hardcoding a list, so the warm set is built by the same URL
-builders the components call and cannot drift from what the app requests. That
-matters most for `RENDER_REVISION`: a hand-maintained list would keep warming
-superseded URLs after a bump while warming nothing useful.
+Responses carry `x-render-source: store | upstream` so which path served a
+request is visible from `curl`.
 
-163 URLs: 72 frames at each of the two offered resolutions, the three
-thumbnails, all fifteen swatches, and the empty personalisation preview. Six at
-a time, about 13s.
+Writes happen in `after()`, so storing never delays the response, and every
+store operation is best-effort — a store that is missing, full, or erroring
+degrades to "no durable cache", never to a broken image.
 
-Run it by hand against any deployment:
+**Setup.** The store exists (`burberry-renders`) but must be connected to the
+project once, in the Vercel dashboard under Storage → Blob → Connect to Project.
+That injects `BLOB_READ_WRITE_TOKEN`. Until it is connected,
+`storeEnabled()` is false and the route behaves exactly as it did before.
+
+## Pre-warming
+
+[`scripts/prewarm.mjs`](scripts/prewarm.mjs) walks a list of render URLs. It asks
+[`/api/prewarm`](src/app/api/prewarm/route.ts) what to fetch rather than
+hardcoding it, so the warm set is built by the same URL builders the components
+call and cannot drift from what the app requests — which matters most across
+`RENDER_REVISION` bumps, where a hand-maintained list would warm superseded URLs
+and nothing else.
+
+Two scopes, answering different problems:
+
+| Scope | Covers | URLs | Runs |
+| --- | --- | --- | --- |
+| `deploy` | landing configuration, all 72 frames at both resolutions, thumbnails, every swatch, empty preview | 163 | after every deploy |
+| `variants` | all 486 filter combinations, every 6th frame + thumbnails | 7,290 | once |
+
+`deploy` warms the CDN edge, which is what a deployment resets. `variants`
+populates the durable store so any colour combination is fast permanently — a
+one-time job, not a per-deploy one, which is only sensible because renders now
+survive deploys.
+
+[`.github/workflows/prewarm.yml`](.github/workflows/prewarm.yml) runs the
+`deploy` scope on the `deployment_status` event once Vercel reports success. The
+`variants` scope is a manual run from the Actions tab, or:
 
 ```bash
-npm run prewarm                                  # production
-node scripts/prewarm.mjs http://localhost:3000   # anywhere else
+npm run prewarm                                       # production, deploy scope
+node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
+node scripts/prewarm.mjs http://localhost:3000        # anywhere else
 ```
 
-It exits non-zero if any URL fails, so a broken render surfaces in CI rather
-than in front of a visitor. The workflow can also be triggered manually from the
-Actions tab.
+It exits non-zero if any URL fails, so a broken render surfaces in CI rather than
+in front of a visitor, and reports a tally of `x-vercel-cache` and
+`x-render-source` so you can see what actually happened.
 
-Warming reaches two layers. Vercel's edge cache is regional, so a run from a CI
-runner primarily warms the PoP nearest it — but the compose service caches its
-own renders too (a repeat request drops from ~830ms to ~230ms), and that part
-helps every region.
+One caveat: Vercel's edge cache is regional, so a run from a CI runner primarily
+warms the PoP nearest it. The durable store has no such limitation — once a render
+is in Blob it is fast from anywhere, which is the more important half.
 
 ## Development
 

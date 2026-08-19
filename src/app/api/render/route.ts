@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import sharp from "sharp";
 import {
   ALLOWED_SIZES,
@@ -14,6 +15,7 @@ import {
   upstreamSwatchUrl,
   type Parts,
 } from "@/lib/ripe";
+import { readRender, renderKey, writeRender } from "@/lib/render-store";
 
 /**
  * Image cache in front of the compose service.
@@ -33,6 +35,11 @@ import {
  * fetch the WebP, which keeps its alpha, and re-encode. Measured at ~70ms per
  * frame for roughly half the bytes — negligible beside the ~830ms the upstream
  * render itself costs, and it only happens on a cache miss.
+ *
+ * Finished renders are also kept in Blob (see src/lib/render-store.ts), because
+ * the CDN cache is per-deployment: without it every deploy re-pays the upstream
+ * render for every image. With it, a render is produced once and afterwards read
+ * from storage.
  */
 
 /** RMSE against the source is ~1.1/255 here: no visible loss at half the size. */
@@ -146,6 +153,20 @@ export async function GET(request: Request): Promise<Response> {
   const target = resolveTarget(new URL(request.url).searchParams);
   if (!target) return badRequest("unrecognised render request");
 
+  const contentType = target.transcode ? "image/avif" : "image/webp";
+  const key = renderKey(target.url, target.transcode ? "avif" : "webp");
+
+  const stored = await readRender(key);
+  if (stored) {
+    return new Response(stored, {
+      headers: {
+        "content-type": contentType,
+        "cache-control": IMMUTABLE,
+        "x-render-source": "store",
+      },
+    });
+  }
+
   let upstream: Response;
   try {
     // The CDN holds the result, so this request is the cache miss path.
@@ -168,10 +189,16 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   if (!target.transcode) {
-    return new Response(upstream.body, {
+    const passthrough = new Uint8Array(await upstream.arrayBuffer());
+    // Writing after the response keeps the store off the critical path.
+    after(async () => {
+      await writeRender(key, passthrough, contentType);
+    });
+    return new Response(passthrough, {
       headers: {
-        "content-type": upstream.headers.get("content-type") ?? "image/webp",
+        "content-type": upstream.headers.get("content-type") ?? contentType,
         "cache-control": IMMUTABLE,
+        "x-render-source": "upstream",
       },
     });
   }
@@ -180,13 +207,19 @@ export async function GET(request: Request): Promise<Response> {
   // streamed. At ~50KB a frame that costs nothing worth measuring.
   try {
     const source = Buffer.from(await upstream.arrayBuffer());
-    const encoded = await sharp(source)
-      .avif({ quality: AVIF_QUALITY, effort: AVIF_EFFORT })
-      .toBuffer();
-    return new Response(new Uint8Array(encoded), {
+    const encoded = new Uint8Array(
+      await sharp(source)
+        .avif({ quality: AVIF_QUALITY, effort: AVIF_EFFORT })
+        .toBuffer(),
+    );
+    after(async () => {
+      await writeRender(key, encoded, contentType);
+    });
+    return new Response(encoded, {
       headers: {
-        "content-type": "image/avif",
+        "content-type": contentType,
         "cache-control": IMMUTABLE,
+        "x-render-source": "upstream",
       },
     });
   } catch {
