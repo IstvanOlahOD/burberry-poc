@@ -92,7 +92,7 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex flex-col ">
       <div
         ref={stageRef}
         className="flex min-h-0 flex-1 justify-center bg-background"
@@ -100,7 +100,7 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
         {/* The source caps the stage at 1500px of content behind a 12px left
             inset and centres it; the rails hold 250px and the viewer column
             takes whatever is left. */}
-        <div className="flex w-full max-w-[1512px] pl-3">
+        <div className="flex w-full container pl-3">
           <aside className="w-[250px] shrink-0 pt-[110px] pb-[53px]">
             <Thumbnails
               parts={current.parts}
