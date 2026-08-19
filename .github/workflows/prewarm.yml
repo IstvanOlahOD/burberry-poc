@@ -1,0 +1,28 @@
+name: Pre-warm render cache
+
+# Vercel's CDN cache is per-deployment, so each production deploy starts cold.
+# This runs once Vercel reports the deployment succeeded.
+on:
+  deployment_status:
+  workflow_dispatch:
+
+jobs:
+  prewarm:
+    # `deployment_status` fires for every state; only a successful production
+    # deploy is worth warming.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment_status.environment == 'Production')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Warms the production alias rather than the deployment URL: cache keys
+      # include the host, and the alias is what visitors actually hit.
+      - name: Warm the cache
+        run: node scripts/prewarm.mjs https://burberry-poc.vercel.app

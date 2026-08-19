@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prewarm": "node scripts/prewarm.mjs"
   },
   "dependencies": {
     "next": "16.3.1",

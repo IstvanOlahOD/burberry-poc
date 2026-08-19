@@ -122,6 +122,43 @@ Note that render *time* upstream is almost independent of the requested size
 (~715ms at 250px vs ~938ms at 2000px), so right-sizing buys bytes and decode
 time, not a faster cold render.
 
+## Pre-warming after deploy
+
+Vercel's CDN cache is scoped to a deployment, so every production deploy starts
+cold and whoever arrives first pays the upstream render — ~830ms a frame, 72
+frames to a turntable.
+
+[`.github/workflows/prewarm.yml`](.github/workflows/prewarm.yml) runs on the
+`deployment_status` event, once Vercel reports a successful production deploy,
+and walks the default configuration so the cache is warm before anyone looks.
+
+[`scripts/prewarm.mjs`](scripts/prewarm.mjs) does the work — plain Node, no
+dependencies. It asks [`/api/prewarm`](src/app/api/prewarm/route.ts) what to
+fetch rather than hardcoding a list, so the warm set is built by the same URL
+builders the components call and cannot drift from what the app requests. That
+matters most for `RENDER_REVISION`: a hand-maintained list would keep warming
+superseded URLs after a bump while warming nothing useful.
+
+163 URLs: 72 frames at each of the two offered resolutions, the three
+thumbnails, all fifteen swatches, and the empty personalisation preview. Six at
+a time, about 13s.
+
+Run it by hand against any deployment:
+
+```bash
+npm run prewarm                                  # production
+node scripts/prewarm.mjs http://localhost:3000   # anywhere else
+```
+
+It exits non-zero if any URL fails, so a broken render surfaces in CI rather
+than in front of a visitor. The workflow can also be triggered manually from the
+Actions tab.
+
+Warming reaches two layers. Vercel's edge cache is regional, so a run from a CI
+runner primarily warms the PoP nearest it — but the compose service caches its
+own renders too (a repeat request drops from ~830ms to ~230ms), and that part
+helps every region.
+
 ## Development
 
 Requires Node 24 (see `.nvmrc` and `engines` in `package.json`; Vercel builds on the same major).
