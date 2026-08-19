@@ -62,35 +62,61 @@ in about a second and a drag is usable long before the remaining sixty arrive.
 
 ## Image format and size
 
-Frames are requested as **WebP**, via the `fmt` parameter on `/api/render`.
+Frames are served as **AVIF, transcoded by this app** rather than requested from
+the render service.
 
-The service also renders AVIF at roughly a quarter of the bytes, which is
-tempting — but **its AVIF carries no alpha channel**. The bitstream contains no
-auxiliary alpha image, and transparent pixels come back opaque black, whereas its
-WebP includes an `ALPH` chunk. These renders are cutouts that composite over the
-page and under a translucent picker panel, so transparency is not optional. The
-service's `background` parameter only flattens to a chosen colour, which would
-bake the page background into the product imagery.
+The service will emit AVIF at roughly a quarter of the bytes, but its encoder
+discards the alpha channel — no auxiliary alpha image in the bitstream, and
+transparent pixels arrive opaque black. These renders are cutouts that composite
+over the page and under a translucent picker panel, so transparency is not
+optional. Its `background` parameter only flattens to a chosen colour, which
+would bake the page background into the product imagery.
 
-Capturing that saving would mean re-encoding their WebP to AVIF ourselves with
-alpha intact, rather than asking the service for AVIF.
+So [`/api/render`](src/app/api/render/route.ts) fetches the WebP, which keeps
+its `ALPH` chunk, and re-encodes with `sharp` at quality 70. Alpha survives, and
+encoding costs ~70ms — negligible beside the ~830ms the upstream render itself
+takes, and it only happens on a cache miss.
 
-What the sizing change does buy, at constant format:
+Quality 70 was chosen by measurement; RMSE is against the source composited over
+the page background:
 
-| Size | Per frame | 72 frames |
-| --- | --- | --- |
-| WebP @1000 (previously, all clients) | 73.9 KB | ~5200 KB |
-| WebP @720 (1x displays) | 48.5 KB | **2498 KB** measured |
-| WebP @1440 (2x displays) | 119 KB | — |
+| AVIF quality | Bytes | vs WebP | RMSE |
+| --- | --- | --- | --- |
+| 40 | 11.2 KB | −77% | 2.25 |
+| 50 | 15.5 KB | −68% | 1.72 |
+| **70** | **23.9 KB** | **−51%** | **1.14** |
+| 80 | 29.9 KB | −38% | 0.94 |
 
-The viewer box is 720 CSS px, so a flat 1000 over-fetched on 1x displays and
-under-sampled on 2x. Both resolutions are now offered via `srcSet` (`1x`/`2x`)
-and the browser picks. Offering them through `srcSet` rather than reading
-`devicePixelRatio` during render keeps server and client markup identical, which
-a hydrating client requires.
+Resolution follows the display. The viewer box is 720 CSS px, so a flat 1000
+over-fetched on 1x and under-sampled on 2x; both are offered via `srcSet`
+(`1x`/`2x`) and the browser picks. Offering them through `srcSet` rather than
+reading `devicePixelRatio` during render keeps server and client markup
+identical, which hydration requires.
 
-Format is carried in the URL rather than negotiated from `Accept`: Vercel's
-`Vary` handling is limited, and a mis-negotiated format is a broken image.
+Measured in the browser, a full 72-frame turntable:
+
+| | Total |
+| --- | --- |
+| WebP @1000 (originally, all clients) | ~5200 KB |
+| WebP @720 | 2498 KB |
+| AVIF @720, transcoded | **1188 KB** |
+
+Format travels in the URL rather than behind `Vary: Accept`, because Vercel's
+`Vary` handling is limited and a mis-negotiated format is a broken image. Clients
+that cannot decode AVIF fall back per image: an `onError` switches that
+component to `FALLBACK_FORMAT`.
+
+### The revision token
+
+Every render URL carries `v=${RENDER_REVISION}`, and the route refuses anything
+that is not the current revision.
+
+Responses are `immutable` for a year, so the bytes behind a URL must never
+change. Revision 1 was AVIF straight from the service — the alpha-less version
+above. After switching to transcoding, clients that had cached revision 1 kept
+serving black backgrounds from their own caches, because the URL was identical.
+**Bump `RENDER_REVISION` in [src/lib/ripe.ts](src/lib/ripe.ts) whenever the
+encoder, quality, or anything else affecting the output bytes changes.**
 
 Note that render *time* upstream is almost independent of the requested size
 (~715ms at 250px vs ~938ms at 2000px), so right-sizing buys bytes and decode

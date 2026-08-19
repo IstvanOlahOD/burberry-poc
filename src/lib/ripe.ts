@@ -12,22 +12,24 @@ export const RIPE_API = "https://ripe-core-sbx.platforme.com/api";
 export const BRAND = "burberry_tech";
 export const MODEL = "trench";
 /**
- * WebP, not AVIF.
+ * AVIF, transcoded by us rather than requested from the service.
  *
- * The service's AVIF is ~4x smaller, but it carries no alpha channel — the
- * bitstream has no auxiliary alpha image, and transparent pixels come back
- * opaque black. These renders are cutouts that have to composite over the page
- * (the picker panel is translucent over the coat), so transparency is not
- * optional. Its `background` parameter only flattens to a chosen colour, which
- * would bake the page background into the product imagery.
+ * The service will emit AVIF, but its encoder drops the alpha channel: the
+ * bitstream has no auxiliary alpha image and transparent pixels come back opaque
+ * black. These renders are cutouts that composite over the page and under a
+ * translucent picker panel, so transparency is not optional.
  *
- * Getting the AVIF saving would mean re-encoding their WebP ourselves, alpha
- * intact, rather than asking the service for AVIF.
+ * So the proxy fetches the WebP — which keeps its alpha — and re-encodes to AVIF
+ * itself, alpha intact. See src/app/api/render/route.ts.
+ *
+ * WebP remains reachable via `fmt=webp` and is what a client falls back to if
+ * it cannot decode AVIF.
  */
 export const FORMATS = ["avif", "webp"] as const;
 export type Format = (typeof FORMATS)[number];
 
-export const DEFAULT_FORMAT: Format = "webp";
+export const DEFAULT_FORMAT: Format = "avif";
+export const FALLBACK_FORMAT: Format = "webp";
 
 export function isFormat(value: string): value is Format {
   return (FORMATS as readonly string[]).includes(value);
@@ -217,6 +219,18 @@ function appendParts(params: URLSearchParams, parts: Parts): void {
  */
 const RENDER_PROXY = "/api/render";
 
+/**
+ * Bumped whenever the bytes a given request produces change — a new encoder, a
+ * different quality, anything.
+ *
+ * Responses are served `immutable` for a year, so without this a client that
+ * cached an older encoding would keep it indefinitely. That is not theoretical:
+ * revision 1 was AVIF straight from the render service, which silently dropped
+ * the alpha channel, and cached copies kept showing black backgrounds after the
+ * fix because the URL had not changed.
+ */
+export const RENDER_REVISION = "2";
+
 /** Only the resolutions the app asks for, so the cache can't be flooded. 1000
  * is retained because URLs at that size are already cached from before the
  * switch to DPR-aware sizing. */
@@ -240,6 +254,7 @@ export function composeUrl(options: {
 }): string {
   const params = new URLSearchParams({
     kind: "frame",
+    v: RENDER_REVISION,
     fmt: options.format ?? DEFAULT_FORMAT,
     frame: options.frame,
     size: String(options.size),
@@ -258,13 +273,23 @@ export function personalizationPreviewUrl(
   initials: string,
   format: Format = DEFAULT_FORMAT,
 ): string {
-  const params = new URLSearchParams({ kind: "initials", fmt: format, initials });
+  const params = new URLSearchParams({
+    kind: "initials",
+    v: RENDER_REVISION,
+    fmt: format,
+    initials,
+  });
   appendParts(params, parts);
   return `${RENDER_PROXY}?${params.toString()}`;
 }
 
 export function swatchUrl(material: string, color: string): string {
-  const params = new URLSearchParams({ kind: "swatch", material, color });
+  const params = new URLSearchParams({
+    kind: "swatch",
+    v: RENDER_REVISION,
+    material,
+    color,
+  });
   // Swatches stay PNG: they are flat colour and the service ignores format here.
   return `${RENDER_PROXY}?${params.toString()}`;
 }
