@@ -11,15 +11,22 @@ import { RENDER_REVISION } from "./ripe";
  * then served from storage — measured in tens of milliseconds rather than
  * seconds.
  *
- * Absent a `BLOB_READ_WRITE_TOKEN` this degrades to a no-op and the route
- * behaves exactly as it did before, which keeps local development and any
- * deployment without a connected store working.
+ * Credentials are left to the SDK, which prefers OIDC — `VERCEL_OIDC_TOKEN`,
+ * injected at runtime, together with `BLOB_STORE_ID` — and falls back to a
+ * static `BLOB_READ_WRITE_TOKEN`. Connecting a store through the dashboard sets
+ * `BLOB_STORE_ID` and no static token, so gating on the token alone would leave
+ * the store permanently unused.
+ *
+ * With neither present this degrades to a no-op and the route behaves exactly as
+ * it did before, which keeps local development working.
  */
 
-const TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
+const CONFIGURED = Boolean(
+  process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN,
+);
 
 export function storeEnabled(): boolean {
-  return Boolean(TOKEN);
+  return CONFIGURED;
 }
 
 /**
@@ -35,10 +42,10 @@ export function renderKey(upstreamUrl: string, extension: string): string {
 
 /** The stored render, or null when absent, unconfigured, or unreachable. */
 export async function readRender(key: string): Promise<ArrayBuffer | null> {
-  if (!TOKEN) return null;
+  if (!CONFIGURED) return null;
   try {
     // `head` throws BlobNotFoundError when the key has never been written.
-    const meta = await head(key, { token: TOKEN });
+    const meta = await head(key);
     const response = await fetch(meta.url, { cache: "no-store" });
     if (!response.ok) return null;
     return await response.arrayBuffer();
@@ -59,10 +66,9 @@ export async function writeRender(
   bytes: Uint8Array,
   contentType: string,
 ): Promise<void> {
-  if (!TOKEN) return;
+  if (!CONFIGURED) return;
   try {
     await put(key, Buffer.from(bytes), {
-      token: TOKEN,
       access: "public",
       contentType,
       // The key is already content-addressed, so a suffix would only create
