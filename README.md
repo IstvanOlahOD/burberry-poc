@@ -62,31 +62,35 @@ in about a second and a drag is usable long before the remaining sixty arrive.
 
 ## Image format and size
 
-Frames are requested as **AVIF**, chosen by the `fmt` parameter on
-`/api/render`. The service renders natively to either format and its AVIF is
-far smaller than its own WebP — so this is a straight pass-through, not a
-re-encode:
+Frames are requested as **WebP**, via the `fmt` parameter on `/api/render`.
 
-| Format / size | Per frame | 72 frames |
+The service also renders AVIF at roughly a quarter of the bytes, which is
+tempting — but **its AVIF carries no alpha channel**. The bitstream contains no
+auxiliary alpha image, and transparent pixels come back opaque black, whereas its
+WebP includes an `ALPH` chunk. These renders are cutouts that composite over the
+page and under a translucent picker panel, so transparency is not optional. The
+service's `background` parameter only flattens to a chosen colour, which would
+bake the page background into the product imagery.
+
+Capturing that saving would mean re-encoding their WebP to AVIF ourselves with
+alpha intact, rather than asking the service for AVIF.
+
+What the sizing change does buy, at constant format:
+
+| Size | Per frame | 72 frames |
 | --- | --- | --- |
-| WebP @1000 (previously) | 49.9 KB | 3506 KB |
-| AVIF @1440 (2x displays) | 28.4 KB | 1409 KB |
-| AVIF @720 (1x displays) | 11.5 KB | **512 KB** |
+| WebP @1000 (previously, all clients) | 73.9 KB | ~5200 KB |
+| WebP @720 (1x displays) | 48.5 KB | **2498 KB** measured |
+| WebP @1440 (2x displays) | 119 KB | — |
 
-Measured decode cost favours AVIF too, because the image is so much smaller:
-2.7ms median at 720px against 11.8ms for the WebP it replaced, well inside a
-60fps frame budget during a drag.
-
-The two resolutions are offered via `srcSet` (`1x`/`2x`) so the browser picks
-by device pixel ratio. That keeps the markup identical between server and client
-— reading `devicePixelRatio` during render would desynchronise hydration — and
-fixes both halves of the old behaviour, which over-fetched on 1x displays and
-under-sampled on 2x.
+The viewer box is 720 CSS px, so a flat 1000 over-fetched on 1x displays and
+under-sampled on 2x. Both resolutions are now offered via `srcSet` (`1x`/`2x`)
+and the browser picks. Offering them through `srcSet` rather than reading
+`devicePixelRatio` during render keeps server and client markup identical, which
+a hydrating client requires.
 
 Format is carried in the URL rather than negotiated from `Accept`: Vercel's
-`Vary` handling is limited, and an AVIF served to a client that cannot decode it
-is a blank viewer. Instead each image falls back on its own — an `onError`
-switches that component to `FALLBACK_FORMAT`.
+`Vary` handling is limited, and a mis-negotiated format is a broken image.
 
 Note that render *time* upstream is almost independent of the requested size
 (~715ms at 250px vs ~938ms at 2000px), so right-sizing buys bytes and decode

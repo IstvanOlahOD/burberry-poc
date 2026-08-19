@@ -2,14 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  DEFAULT_FORMAT,
-  FALLBACK_FORMAT,
   FRAME_COUNT,
   VIEWER_SIZE,
   VIEWER_SIZE_RETINA,
   composeUrl,
   frameName,
-  type Format,
   type Parts,
 } from "@/lib/ripe";
 import { DragHintGraphic } from "./icons";
@@ -62,14 +59,6 @@ export function Viewer({
   } | null>(null);
 
   /**
-   * AVIF is the default because the render service emits it far smaller than its
-   * own WebP. If a client cannot decode it, the first failure drops the whole
-   * viewer to WebP rather than probing capabilities up front — which keeps the
-   * server and client markup identical.
-   */
-  const [format, setFormat] = useState<Format>(DEFAULT_FORMAT);
-
-  /**
    * Both resolutions are offered and the browser picks by device pixel ratio, so
    * the markup stays deterministic between server and client. A flat size would
    * either over-fetch on 1x or under-sample on 2x.
@@ -77,13 +66,13 @@ export function Viewer({
   const frameSources = useCallback(
     (frame: number): Sources => {
       const at = (size: number) =>
-        composeUrl({ parts, format, size, frame: frameName(frame) });
+        composeUrl({ parts, size, frame: frameName(frame) });
       return {
         src: at(VIEWER_SIZE),
         srcSet: `${at(VIEWER_SIZE)} 1x, ${at(VIEWER_SIZE_RETINA)} 2x`,
       };
     },
-    [parts, format],
+    [parts],
   );
 
   const target = frameSources(index);
@@ -95,10 +84,6 @@ export function Viewer({
    */
   const [rendered, setRendered] = useState<Sources>(target);
   const showingTarget = rendered.src === target.src;
-
-  const onFormatError = () => {
-    if (format === DEFAULT_FORMAT) setFormat(FALLBACK_FORMAT);
-  };
 
   // Warm the turntable through a small pool of parallel requests. The service
   // multiplexes over HTTP/2 — six concurrent frames cost barely more than one —
@@ -194,7 +179,6 @@ export function Viewer({
           alt={`Trench coat, frame ${index + 1} of ${FRAME_COUNT}`}
           draggable={false}
           fetchPriority="high"
-          onError={onFormatError}
           className="h-full w-full object-contain"
         />
 
@@ -208,7 +192,6 @@ export function Viewer({
             alt=""
             aria-hidden
             onLoad={() => setRendered(target)}
-            onError={onFormatError}
             className="pointer-events-none absolute size-0 opacity-0"
           />
         )}

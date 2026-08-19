@@ -12,16 +12,22 @@ export const RIPE_API = "https://ripe-core-sbx.platforme.com/api";
 export const BRAND = "burberry_tech";
 export const MODEL = "trench";
 /**
- * The compose service renders natively to either format. Its AVIF is ~77%
- * smaller than its own WebP at identical dimensions (12.7KB vs 49.9KB at
- * 1000px), so AVIF is the default and WebP is the fallback for clients that
- * cannot decode it.
+ * WebP, not AVIF.
+ *
+ * The service's AVIF is ~4x smaller, but it carries no alpha channel — the
+ * bitstream has no auxiliary alpha image, and transparent pixels come back
+ * opaque black. These renders are cutouts that have to composite over the page
+ * (the picker panel is translucent over the coat), so transparency is not
+ * optional. Its `background` parameter only flattens to a chosen colour, which
+ * would bake the page background into the product imagery.
+ *
+ * Getting the AVIF saving would mean re-encoding their WebP ourselves, alpha
+ * intact, rather than asking the service for AVIF.
  */
 export const FORMATS = ["avif", "webp"] as const;
 export type Format = (typeof FORMATS)[number];
 
-export const DEFAULT_FORMAT: Format = "avif";
-export const FALLBACK_FORMAT: Format = "webp";
+export const DEFAULT_FORMAT: Format = "webp";
 
 export function isFormat(value: string): value is Format {
   return (FORMATS as readonly string[]).includes(value);

@@ -1,14 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import {
-  DEFAULT_FORMAT,
-  FALLBACK_FORMAT,
   THUMBNAIL_FRAMES,
   THUMBNAIL_SIZE,
   composeUrl,
   frameIndex,
-  type Format,
   type Parts,
 } from "@/lib/ripe";
 
@@ -19,10 +15,6 @@ type ThumbnailsProps = {
 };
 
 export function Thumbnails({ parts, index, onIndexChange }: ThumbnailsProps) {
-  // Matches the viewer: AVIF by default, dropping to WebP on the first failure
-  // rather than probing what the browser supports before rendering.
-  const [format, setFormat] = useState<Format>(DEFAULT_FORMAT);
-
   return (
     <div className="flex w-[250px] flex-col">
       {THUMBNAIL_FRAMES.map((frame, position) => {
@@ -46,12 +38,9 @@ export function Thumbnails({ parts, index, onIndexChange }: ThumbnailsProps) {
             {/* eslint-disable-next-line @next/next/no-img-element -- rendered by
                 the remote compose service, already sized for this box. */}
             <img
-              src={composeUrl({ parts, frame, format, size: THUMBNAIL_SIZE })}
+              src={composeUrl({ parts, frame, size: THUMBNAIL_SIZE })}
               alt=""
               draggable={false}
-              onError={() => {
-                if (format === DEFAULT_FORMAT) setFormat(FALLBACK_FORMAT);
-              }}
               className="size-full object-contain"
             />
           </button>
