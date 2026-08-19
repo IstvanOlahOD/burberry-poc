@@ -127,13 +127,17 @@ export function PickerPanel({
                           color: color.name,
                         })
                       }
-                      className="block w-full"
+                      className="group block w-full"
                     >
+                      {/* The source has no hover on these; the lift is ours, kept
+                          well short of the active scale so the two stay legible
+                          apart. Only unselected swatches lift — hovering the
+                          active one must not shrink it. */}
                       <span
                         className={`mx-auto block size-[50px] overflow-hidden rounded-full ${
                           isActive
                             ? "scale-[1.2] transition-transform duration-200 ease-out"
-                            : "transition-transform duration-[125ms] ease-in-out"
+                            : "transition-transform duration-[125ms] ease-in-out group-hover:scale-[1.08]"
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- remote swatch render. */}
@@ -144,8 +148,10 @@ export function PickerPanel({
                         />
                       </span>
                       <span
-                        className={`mt-[18px] block text-[12px] leading-[14px] font-medium ${
-                          isActive ? "text-[#151515]" : "text-muted"
+                        className={`mt-[18px] block text-[12px] leading-[14px] font-medium transition-colors duration-100 ease-in-out ${
+                          isActive
+                            ? "text-[#151515]"
+                            : "text-muted group-hover:text-[#151515]"
                         }`}
                       >
                         {color.label}
@@ -161,18 +167,20 @@ export function PickerPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(active.name, null)}
-                    className="block w-full"
+                    className="group block w-full"
                   >
                     <span
                       className={`mx-auto block size-[50px] rounded-full border border-dashed border-[#bbb] ${
                         currentSelection
-                          ? "transition-transform duration-[125ms] ease-in-out"
+                          ? "transition-transform duration-[125ms] ease-in-out group-hover:scale-[1.08]"
                           : "scale-[1.2] transition-transform duration-200 ease-out"
                       }`}
                     />
                     <span
-                      className={`mt-[18px] block text-[12px] leading-[14px] font-medium ${
-                        currentSelection ? "text-muted" : "text-[#151515]"
+                      className={`mt-[18px] block text-[12px] leading-[14px] font-medium transition-colors duration-100 ease-in-out ${
+                        currentSelection
+                          ? "text-muted group-hover:text-[#151515]"
+                          : "text-[#151515]"
                       }`}
                     >
                       No {active.label}
