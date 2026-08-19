@@ -65,7 +65,7 @@ worth doing — the time goes on compositing, not transfer.
 
 ## Development
 
-Requires Node 20.9+ (see `.nvmrc`).
+Requires Node 24 (see `.nvmrc` and `engines` in `package.json`; Vercel builds on the same major).
 
 ```bash
 npm run dev
