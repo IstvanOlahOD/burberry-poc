@@ -160,7 +160,7 @@ Two scopes, answering different problems:
 | Scope | Covers | URLs | Runs |
 | --- | --- | --- | --- |
 | `deploy` | landing configuration, all 72 frames at both resolutions, thumbnails, every swatch, empty preview | 163 | after every deploy |
-| `variants` | all 486 filter combinations, every 6th frame + thumbnails | 7,290 | once |
+| `variants` | all 486 filter combinations, frames per `stride` + thumbnails | 7,290 at stride 6 | once |
 
 `deploy` warms the CDN edge, which is what a deployment resets. `variants`
 populates the durable store so any colour combination is fast permanently — a
@@ -175,6 +175,16 @@ survive deploys.
 npm run prewarm                                       # production, deploy scope
 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
 node scripts/prewarm.mjs http://localhost:3000        # anywhere else
+```
+
+Coverage of the `variants` scope is a dial: `stride` picks how many of the 72
+frames each configuration gets (6 gives the twelve the viewer warms first, 1 gives
+all of them) and `sizes` picks which of the `srcSet` resolutions to cover. Both are
+allowlisted so the parameter cannot mint unbounded URL sets.
+
+```bash
+STRIDE=1 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
+STRIDE=1 SIZES=720,1440 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
 ```
 
 It exits non-zero if any URL fails, so a broken render surfaces in CI rather than
