@@ -1,26 +1,158 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #4d4d4d;
+  --ink: #0d0d0d;
+  --muted: #aaaaaa;
+  --hairline: #dddddd;
+  --swatch-ring: #6d6d6d;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-swatch-ring: var(--swatch-ring);
+  --font-sans: var(--font-roboto);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-roboto), Roboto, Lato, "Source Sans Pro", sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The picker panel and colour rails scroll horizontally without a visible bar,
+   matching the source configurator. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Modal chrome, matching the source configurator's dialogs. The enter runs as a
+   CSS animation so no state flip is needed on mount; the leave is driven by a
+   class the dialog sets before it unmounts. */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(21, 21, 21, 0.43);
+}
+
+.modal-container {
+  position: relative;
+  /* The width the dialogs are given is the content width, as in the source,
+     so the 40px side padding sits outside it. */
+  box-sizing: content-box;
+  max-height: 95%;
+  overflow-y: auto;
+  padding: 0 40px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+/* The close tab sits flush in the container's top-left corner, over the
+   content's 40px top padding. */
+.modal-close {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 5px 23px;
+  color: #fff;
+  background-color: #000;
+  border-radius: 4px 0;
+}
+
+.modal-title {
+  margin-bottom: 10px;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  line-height: normal;
+  text-align: center;
+  color: #272a2f;
+}
+
+@keyframes modal-overlay-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes modal-overlay-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: translateY(5%) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes modal-panel-fade-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
+@keyframes modal-panel-shrink-out {
+  from { transform: scale(1) }
+  to { transform: scale(0.97) }
+}
+
+.modal-enter {
+  animation: modal-overlay-in 0.2s cubic-bezier(0.645, 0.045, 0.355, 1) both;
+}
+
+.modal-enter .modal-container {
+  animation: modal-panel-in 0.2s cubic-bezier(0.645, 0.045, 0.355, 1) both;
+}
+
+/* The overlay lingers a beat after the panel has gone, as in the source. */
+.modal-leave {
+  animation: modal-overlay-out 0.2s cubic-bezier(0.645, 0.045, 0.355, 1) 0.25s both;
+}
+
+/* Split in two so the fade and the shrink keep the source's separate
+   durations. */
+.modal-leave .modal-container {
+  animation:
+    modal-panel-fade-out 0.15s ease-out both,
+    modal-panel-shrink-out 0.1s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter,
+  .modal-enter .modal-container,
+  .modal-leave,
+  .modal-leave .modal-container {
+    animation-duration: 0.01ms;
+    animation-delay: 0ms;
+  }
 }

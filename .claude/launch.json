@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "burberry-poc",
+      "runtimeExecutable": "C:\\Users\\oisti\\AppData\\Roaming\\nvm\\v22.21.1\\npm.cmd",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}
