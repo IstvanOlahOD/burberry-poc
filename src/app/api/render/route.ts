@@ -4,6 +4,7 @@ import {
   PARTS,
   PART_ORDER,
   getPart,
+  isFormat,
   normalizeInitials,
   upstreamComposeUrl,
   upstreamPreviewUrl,
@@ -65,6 +66,11 @@ function parseFrame(value: string | null): string | null {
 function resolveTarget(params: URLSearchParams): string | null {
   const kind = params.get("kind");
 
+  // Carried in the URL rather than negotiated from `Accept`: Vercel's `Vary`
+  // handling is limited, and an AVIF served to a client that cannot decode it
+  // is a blank viewer. An explicit parameter keeps the cache key deterministic.
+  const fmt = params.get("fmt") ?? "";
+
   if (kind === "swatch") {
     const material = params.get("material") ?? "";
     const color = params.get("color") ?? "";
@@ -78,8 +84,14 @@ function resolveTarget(params: URLSearchParams): string | null {
   const parts = parseParts(params.getAll("p"));
   if (!parts) return null;
 
+  if (!isFormat(fmt)) return null;
+
   if (kind === "initials") {
-    return upstreamPreviewUrl(parts, normalizeInitials(params.get("initials") ?? ""));
+    return upstreamPreviewUrl(
+      parts,
+      normalizeInitials(params.get("initials") ?? ""),
+      fmt,
+    );
   }
 
   if (kind === "frame") {
@@ -87,7 +99,7 @@ function resolveTarget(params: URLSearchParams): string | null {
     if (!frame) return null;
     const size = Number(params.get("size"));
     if (!ALLOWED_SIZES.includes(size)) return null;
-    return upstreamComposeUrl(parts, frame, size);
+    return upstreamComposeUrl(parts, frame, size, fmt);
   }
 
   return null;
@@ -102,7 +114,7 @@ export async function GET(request: Request): Promise<Response> {
     // The CDN holds the result, so this request is the cache miss path.
     upstream = await fetch(target, {
       cache: "no-store",
-      headers: { accept: "image/webp,image/*" },
+      headers: { accept: "image/avif,image/webp,image/*" },
     });
   } catch {
     return new Response("render service unreachable", {

@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  DEFAULT_FORMAT,
+  FALLBACK_FORMAT,
   FRAME_COUNT,
   VIEWER_SIZE,
+  VIEWER_SIZE_RETINA,
   composeUrl,
   frameName,
+  type Format,
   type Parts,
 } from "@/lib/ripe";
 import { DragHintGraphic } from "./icons";
@@ -15,6 +19,25 @@ const PIXELS_PER_FRAME = 6;
 
 /** Frames requested at once while warming the turntable. */
 const WARM_CONCURRENCY = 6;
+
+/**
+ * Warming visits every sixth frame first, so all twelve points of the turn are
+ * covered within about a second and a drag is usable long before the remaining
+ * sixty frames arrive.
+ */
+const WARM_STRIDE = 6;
+
+function warmOrder(): number[] {
+  const order: number[] = [];
+  for (let offset = 0; offset < WARM_STRIDE; offset++) {
+    for (let frame = offset; frame < FRAME_COUNT; frame += WARM_STRIDE) {
+      order.push(frame);
+    }
+  }
+  return order;
+}
+
+type Sources = { src: string; srcSet: string };
 
 type ViewerProps = {
   parts: Parts;
@@ -38,44 +61,71 @@ export function Viewer({
     startIndex: number;
   } | null>(null);
 
-  const frameUrl = useCallback(
-    (frame: number) =>
-      composeUrl({
-        parts,
-        frame: frameName(frame),
-        size: VIEWER_SIZE,
-      }),
-    [parts],
-  );
-
-  const target = frameUrl(index);
+  /**
+   * AVIF is the default because the render service emits it far smaller than its
+   * own WebP. If a client cannot decode it, the first failure drops the whole
+   * viewer to WebP rather than probing capabilities up front — which keeps the
+   * server and client markup identical.
+   */
+  const [format, setFormat] = useState<Format>(DEFAULT_FORMAT);
 
   /**
-   * The frame on screen, held as a URL so it survives both rotation and
-   * configuration changes: the new render only replaces it once it has loaded,
+   * Both resolutions are offered and the browser picks by device pixel ratio, so
+   * the markup stays deterministic between server and client. A flat size would
+   * either over-fetch on 1x or under-sample on 2x.
+   */
+  const frameSources = useCallback(
+    (frame: number): Sources => {
+      const at = (size: number) =>
+        composeUrl({ parts, format, size, frame: frameName(frame) });
+      return {
+        src: at(VIEWER_SIZE),
+        srcSet: `${at(VIEWER_SIZE)} 1x, ${at(VIEWER_SIZE_RETINA)} 2x`,
+      };
+    },
+    [parts, format],
+  );
+
+  const target = frameSources(index);
+
+  /**
+   * What is on screen now. Held as resolved sources so it survives both rotation
+   * and configuration changes: the new render only replaces it once loaded,
    * which is what keeps a drag from flashing an empty viewer.
    */
-  const [renderedUrl, setRenderedUrl] = useState(target);
+  const [rendered, setRendered] = useState<Sources>(target);
+  const showingTarget = rendered.src === target.src;
 
-  // Warm the rest of the turntable through a small pool of parallel requests.
-  // The render service multiplexes these over HTTP/2 — six concurrent frames
-  // cost barely more than one — so warming serially would leave a drag waiting
-  // the better part of a minute for frames that arrive in a few seconds here.
+  const onFormatError = () => {
+    if (format === DEFAULT_FORMAT) setFormat(FALLBACK_FORMAT);
+  };
+
+  // Warm the turntable through a small pool of parallel requests. The service
+  // multiplexes over HTTP/2 — six concurrent frames cost barely more than one —
+  // so warming serially would leave a drag waiting the better part of a minute
+  // for frames that arrive in a few seconds here.
   useEffect(() => {
     let cancelled = false;
-    let nextFrame = 0;
+    const order = warmOrder();
+    let position = 0;
+
     const pump = () => {
-      if (cancelled || nextFrame >= FRAME_COUNT) return;
-      const frame = nextFrame++;
+      if (cancelled || position >= order.length) return;
+      const frame = order[position++];
+      const sources = frameSources(frame);
       const image = new window.Image();
       image.decoding = "async";
+      // Background frames must not compete with the visible one for bandwidth.
+      image.fetchPriority = "low";
       const advance = () => {
         if (!cancelled) pump();
       };
       image.onload = advance;
       image.onerror = advance;
-      image.src = frameUrl(frame);
+      image.srcset = sources.srcSet;
+      image.src = sources.src;
     };
+
     const handle = window.setTimeout(() => {
       for (let worker = 0; worker < WARM_CONCURRENCY; worker++) pump();
     }, 600);
@@ -83,7 +133,7 @@ export function Viewer({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [frameUrl]);
+  }, [frameSources]);
 
   // Capture keeps the rotation alive when the cursor leaves the viewer, but it
   // throws once the pointer is no longer active, so failures are ignored.
@@ -139,21 +189,26 @@ export function Viewer({
         {/* eslint-disable-next-line @next/next/no-img-element -- turntable frames
             are swapped by hand and must bypass the image optimiser. */}
         <img
-          src={renderedUrl}
+          src={rendered.src}
+          srcSet={rendered.srcSet}
           alt={`Trench coat, frame ${index + 1} of ${FRAME_COUNT}`}
           draggable={false}
+          fetchPriority="high"
+          onError={onFormatError}
           className="h-full w-full object-contain"
         />
 
         {/* Loads the requested frame off screen and promotes it once ready. */}
-        {target === renderedUrl ? null : (
+        {showingTarget ? null : (
           // eslint-disable-next-line @next/next/no-img-element -- preloader only.
           <img
-            key={target}
-            src={target}
+            key={target.src}
+            src={target.src}
+            srcSet={target.srcSet}
             alt=""
             aria-hidden
-            onLoad={() => setRenderedUrl(target)}
+            onLoad={() => setRendered(target)}
+            onError={onFormatError}
             className="pointer-events-none absolute size-0 opacity-0"
           />
         )}

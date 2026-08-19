@@ -11,13 +11,38 @@ export const RIPE_API = "https://ripe-core-sbx.platforme.com/api";
 
 export const BRAND = "burberry_tech";
 export const MODEL = "trench";
-export const FORMAT = "webp";
+/**
+ * The compose service renders natively to either format. Its AVIF is ~77%
+ * smaller than its own WebP at identical dimensions (12.7KB vs 49.9KB at
+ * 1000px), so AVIF is the default and WebP is the fallback for clients that
+ * cannot decode it.
+ */
+export const FORMATS = ["avif", "webp"] as const;
+export type Format = (typeof FORMATS)[number];
+
+export const DEFAULT_FORMAT: Format = "avif";
+export const FALLBACK_FORMAT: Format = "webp";
+
+export function isFormat(value: string): value is Format {
+  return (FORMATS as readonly string[]).includes(value);
+}
 
 /** Number of rotation frames on the `side` face. */
 export const FRAME_COUNT = 72;
 
-/** Resolution requested for the main viewer render. */
-export const VIEWER_SIZE = 1000;
+/**
+ * The viewer box is 720 CSS px, so a 1x display needs 720 and a 2x display
+ * 1440. Requesting a flat 1000 over-fetched on the former and under-sampled on
+ * the latter.
+ */
+export const VIEWER_SIZE = 720;
+export const VIEWER_SIZE_RETINA = 1440;
+
+/** Resolution for the current display; falls back to 1x during SSR. */
+export function viewerSize(): number {
+  if (typeof window === "undefined") return VIEWER_SIZE;
+  return window.devicePixelRatio >= 2 ? VIEWER_SIZE_RETINA : VIEWER_SIZE;
+}
 
 /** Resolution requested for the left rail thumbnails (2x of the 76px box). */
 export const THUMBNAIL_SIZE = 204;
@@ -186,8 +211,18 @@ function appendParts(params: URLSearchParams, parts: Parts): void {
  */
 const RENDER_PROXY = "/api/render";
 
-/** Only the resolutions the app actually asks for, so the cache can't be flooded. */
-export const ALLOWED_SIZES = [THUMBNAIL_SIZE, VIEWER_SIZE];
+/** Only the resolutions the app asks for, so the cache can't be flooded. 1000
+ * is retained because URLs at that size are already cached from before the
+ * switch to DPR-aware sizing. */
+export const ALLOWED_SIZES = [
+  THUMBNAIL_SIZE,
+  VIEWER_SIZE,
+  1000,
+  VIEWER_SIZE_RETINA,
+];
+
+/** Size for the personalisation preview, shown in a 300px box. */
+export const PREVIEW_SIZE = 600;
 
 export type RenderKind = "frame" | "swatch" | "initials";
 
@@ -195,9 +230,11 @@ export function composeUrl(options: {
   parts: Parts;
   frame: string;
   size: number;
+  format?: Format;
 }): string {
   const params = new URLSearchParams({
     kind: "frame",
+    fmt: options.format ?? DEFAULT_FORMAT,
     frame: options.frame,
     size: String(options.size),
   });
@@ -210,14 +247,19 @@ export function composeUrl(options: {
  * initials area, requested without `frame` or `size` exactly as the source
  * configurator does.
  */
-export function personalizationPreviewUrl(parts: Parts, initials: string): string {
-  const params = new URLSearchParams({ kind: "initials", initials });
+export function personalizationPreviewUrl(
+  parts: Parts,
+  initials: string,
+  format: Format = DEFAULT_FORMAT,
+): string {
+  const params = new URLSearchParams({ kind: "initials", fmt: format, initials });
   appendParts(params, parts);
   return `${RENDER_PROXY}?${params.toString()}`;
 }
 
 export function swatchUrl(material: string, color: string): string {
   const params = new URLSearchParams({ kind: "swatch", material, color });
+  // Swatches stay PNG: they are flat colour and the service ignores format here.
   return `${RENDER_PROXY}?${params.toString()}`;
 }
 
@@ -227,11 +269,16 @@ export function swatchUrl(material: string, color: string): string {
  * is forwarded verbatim.
  */
 
-export function upstreamComposeUrl(parts: Parts, frame: string, size: number): string {
+export function upstreamComposeUrl(
+  parts: Parts,
+  frame: string,
+  size: number,
+  format: Format,
+): string {
   const params = new URLSearchParams({
     brand: BRAND,
     model: MODEL,
-    format: FORMAT,
+    format,
     frame,
     size: String(size),
   });
@@ -239,11 +286,16 @@ export function upstreamComposeUrl(parts: Parts, frame: string, size: number): s
   return `${RIPE_API}/compose?${params.toString()}`;
 }
 
-export function upstreamPreviewUrl(parts: Parts, initials: string): string {
+export function upstreamPreviewUrl(
+  parts: Parts,
+  initials: string,
+  format: Format,
+): string {
   const params = new URLSearchParams({
     brand: BRAND,
     model: MODEL,
-    format: FORMAT,
+    format,
+    size: String(PREVIEW_SIZE),
     initials: initials || EMPTY_INITIALS,
     initials_profile: INITIALS_PROFILE,
   });

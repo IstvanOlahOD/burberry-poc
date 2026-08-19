@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { INITIALS_MAX, normalizeInitials, personalizationPreviewUrl, type Parts } from "@/lib/ripe";
+import { useEffect, useState } from "react";
+import {
+  DEFAULT_FORMAT,
+  FALLBACK_FORMAT,
+  INITIALS_MAX,
+  normalizeInitials,
+  personalizationPreviewUrl,
+  type Format,
+  type Parts,
+} from "@/lib/ripe";
 import { Modal, useModalClose } from "./modal";
+
+/** Typing must not fire a render request per keystroke. */
+const PREVIEW_DEBOUNCE_MS = 250;
 
 type InitialsModalProps = {
   parts: Parts;
@@ -21,15 +32,30 @@ function InitialsForm({
   onApply: (initials: string) => void;
 }) {
   const [draft, setDraft] = useState(initials);
+  const [previewInitials, setPreviewInitials] = useState(initials);
+  const [format, setFormat] = useState<Format>(DEFAULT_FORMAT);
   const close = useModalClose();
+
+  // The input keeps `draft` so typing stays responsive; only the preview URL
+  // waits, so a burst of keystrokes costs one render instead of one each.
+  useEffect(() => {
+    const handle = window.setTimeout(
+      () => setPreviewInitials(draft),
+      PREVIEW_DEBOUNCE_MS,
+    );
+    return () => window.clearTimeout(handle);
+  }, [draft]);
 
   return (
     <>
       <div className="h-[300px] text-center">
         {/* eslint-disable-next-line @next/next/no-img-element -- remote compose render. */}
         <img
-          src={personalizationPreviewUrl(parts, draft)}
+          src={personalizationPreviewUrl(parts, previewInitials, format)}
           alt="Preview of the personalised trench coat"
+          onError={() => {
+            if (format === DEFAULT_FORMAT) setFormat(FALLBACK_FORMAT);
+          }}
           width={300}
           height={300}
           className="inline-block size-[300px]"
