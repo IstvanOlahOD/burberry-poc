@@ -1,9 +1,16 @@
 name: Pre-warm render cache
 
-# Vercel's CDN cache is per-deployment, so each production deploy starts cold.
-# This runs once Vercel reports the deployment succeeded.
+# DISABLED: automatic warming after a deploy is off.
+#
+# Vercel's CDN cache is per-deployment, so each production deploy starts cold and
+# the first visitor pays the upstream render. This workflow warms it — but only
+# when started by hand, from the Actions tab.
+#
+# To re-enable automatic warming, add `deployment_status:` back under `on:` and
+# restore the event guard in the job's `if:` (both kept below, commented out).
+# Nothing else needs changing; the script and /api/prewarm remain functional.
 on:
-  deployment_status:
+  # deployment_status:
   workflow_dispatch:
     inputs:
       scope:
@@ -14,12 +21,15 @@ on:
 
 jobs:
   prewarm:
-    # `deployment_status` fires for every state; only a successful production
-    # deploy is worth warming.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.deployment_status.state == 'success' &&
-       github.event.deployment_status.environment == 'Production')
+    # Only manual runs reach this job while the deploy trigger is off. With
+    # `deployment_status` re-enabled, restore the guard so that only a
+    # successful production deploy warms:
+    #
+    # if: >-
+    #   github.event_name == 'workflow_dispatch' ||
+    #   (github.event.deployment_status.state == 'success' &&
+    #    github.event.deployment_status.environment == 'Production')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # The variants scope walks thousands of URLs.
     timeout-minutes: 60

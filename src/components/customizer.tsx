@@ -32,7 +32,7 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
     null,
   );
   const [showHint, setShowHint] = useState(true);
-  const stageRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
 
   const current = history.entries[history.cursor];
   const canUndo = history.cursor > 0;
@@ -85,18 +85,21 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
   };
 
   const onFullscreen = () => {
-    const stage = stageRef.current;
-    if (!stage) return;
+    // Fullscreen renders only the target's subtree, so this has to be the root
+    // that also holds the picker panel and the dialogs. Targeting the columns
+    // alone left the filters — and every modal — invisible.
+    const root = fullscreenRef.current;
+    if (!root) return;
     if (document.fullscreenElement) void document.exitFullscreen();
-    else void stage.requestFullscreen();
+    else void root.requestFullscreen();
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <div
-        ref={stageRef}
-        className="flex min-h-0 flex-1 justify-center bg-background"
-      >
+    <div
+      ref={fullscreenRef}
+      className="flex h-dvh flex-col overflow-hidden bg-background"
+    >
+      <div className="flex min-h-0 flex-1 justify-center bg-background">
         {/* The source caps the stage at 1500px of content behind a 12px left
             inset and centres it; the rails hold 250px and the viewer column
             takes whatever is left. */}

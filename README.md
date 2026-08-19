@@ -159,7 +159,7 @@ Two scopes, answering different problems:
 
 | Scope | Covers | URLs | Runs |
 | --- | --- | --- | --- |
-| `deploy` | landing configuration, all 72 frames at both resolutions, thumbnails, every swatch, empty preview | 163 | after every deploy |
+| `deploy` | landing configuration, all 72 frames at both resolutions, thumbnails, every swatch, empty preview | 163 | manually, after a deploy |
 | `variants` | all 486 filter combinations, frames per `stride` + thumbnails | 7,290 at stride 6 | once |
 
 `deploy` warms the CDN edge, which is what a deployment resets. `variants`
@@ -167,9 +167,13 @@ populates the durable store so any colour combination is fast permanently — a
 one-time job, not a per-deploy one, which is only sensible because renders now
 survive deploys.
 
-[`.github/workflows/prewarm.yml`](.github/workflows/prewarm.yml) runs the
-`deploy` scope on the `deployment_status` event once Vercel reports success. The
-`variants` scope is a manual run from the Actions tab, or:
+**Automatic warming is currently disabled.**
+[`.github/workflows/prewarm.yml`](.github/workflows/prewarm.yml) still exists and
+still works, but its `deployment_status` trigger is commented out, so it only
+runs when started by hand from the Actions tab. Re-enabling is two uncommented
+lines in that file — the trigger and the event guard — and nothing else changes.
+
+Either scope can be run manually from the Actions tab, or locally:
 
 ```bash
 npm run prewarm                                       # production, deploy scope
