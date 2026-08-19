@@ -70,6 +70,7 @@ export function Modal({ onClose, title, width, children }: ModalProps) {
 
         <div className="pt-10">
           <h3 className="modal-title">{title}</h3>
+          <div className="modal-rule" />
           <ModalCloseContext.Provider value={requestClose}>{children}</ModalCloseContext.Provider>
         </div>
 

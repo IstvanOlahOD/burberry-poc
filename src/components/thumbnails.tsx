@@ -24,6 +24,9 @@ export function Thumbnails({ parts, index, onIndexChange }: ThumbnailsProps) {
 
   return (
     <div className="flex w-[250px] flex-col">
+      {/* The rail was three unlabelled images. A caps header names it, and the
+          active view gets an ink marker rather than relying on opacity alone. */}
+      <h2 className="label-caps mb-4 text-muted">Views</h2>
       {THUMBNAIL_FRAMES.map((frame, position) => {
         const target = frameIndex(frame);
         const active = target === index;
@@ -34,12 +37,14 @@ export function Thumbnails({ parts, index, onIndexChange }: ThumbnailsProps) {
             onClick={() => onIndexChange(target)}
             aria-label={`View ${frame}`}
             aria-pressed={active}
-            className={`block size-[76px] shrink-0 overflow-hidden p-1 transition-[opacity,box-shadow] ${
+            className={`relative block size-[76px] shrink-0 overflow-hidden p-1 transition-[opacity,box-shadow] before:absolute before:top-1/2 before:left-0 before:h-6 before:w-px before:-translate-y-1/2 before:bg-ink before:transition-opacity ${
+              active ? "before:opacity-100" : "before:opacity-0"
+            } ${
               position > 0 ? "mt-[10px]" : ""
             } ${
               active
-                ? "opacity-100 shadow-[1px_1px_2px_0_rgba(34,34,34,0.25)]"
-                : "opacity-40 shadow-[1px_1px_1px_0_rgba(34,34,34,0.05)]"
+                ? "opacity-100 shadow-[0_2px_10px_-2px_rgba(21,21,21,0.18)]"
+                : "opacity-40 hover:opacity-70"
             }`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- rendered by

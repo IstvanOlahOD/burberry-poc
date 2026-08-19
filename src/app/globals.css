@@ -1,12 +1,23 @@
 @import "tailwindcss";
 
+/* Neutrals are warmed a few degrees off the source's flat greys, which reads
+   closer to print and stops the page feeling like default UI. The geometry of
+   the replica is untouched; only the surface moved. */
 :root {
-  --background: #fafafa;
-  --foreground: #4d4d4d;
-  --ink: #0d0d0d;
-  --muted: #aaaaaa;
-  --hairline: #dddddd;
+  --background: #faf9f7;
+  --foreground: #4a4744;
+  --ink: #151515;
+  --muted: #a8a29b;
+  --hairline: #e4e0da;
   --swatch-ring: #6d6d6d;
+
+  /* A single decelerating curve for everything that enters or settles, so the
+     motion reads as one system rather than per-component guesses. */
+  --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Collapsed height of the fixed picker panel. The viewer subtracts it so the
+     garment is never hidden behind the bar. */
+  --picker-height: 55px;
 }
 
 @theme inline {
@@ -17,6 +28,8 @@
   --color-hairline: var(--hairline);
   --color-swatch-ring: var(--swatch-ring);
   --font-sans: var(--font-roboto);
+  --font-serif: var(--font-cormorant);
+  --ease-editorial: var(--ease-editorial);
 }
 
 /* Tailwind v4's reset drops the browser default of `cursor: pointer` on
@@ -28,6 +41,23 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /* Keyboard users get a visible focus ring; pointer users see nothing extra.
+     A hairline outline set off from the control suits the type better than the
+     default heavy ring. */
+  :focus-visible {
+    outline: 1px solid var(--ink);
+    outline-offset: 3px;
+  }
+}
+
+/* Small caps-style labels: the main lever for a considered feel, since wide
+   tracking on short uppercase text reads as editorial rather than as UI. */
+.label-caps {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 html,
@@ -82,8 +112,12 @@ body {
   overflow-y: auto;
   padding: 0 40px;
   background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.2);
+  /* Squared off, and lifted on a soft two-stage shadow rather than the source's
+     single flat blur — the panel should feel placed rather than pasted. */
+  border-radius: 0;
+  box-shadow:
+    0 24px 64px -16px rgba(21, 21, 21, 0.3),
+    0 2px 8px rgba(21, 21, 21, 0.05);
   text-align: left;
 }
 
@@ -98,18 +132,35 @@ body {
   place-items: center;
   padding: 5px 23px;
   color: #fff;
-  background-color: #000;
-  border-radius: 4px 0;
+  background-color: var(--ink);
+  border-radius: 0;
+  transition: background-color 0.2s var(--ease-editorial);
 }
 
+.modal-close:hover {
+  background-color: #2e2e2e;
+}
+
+/* The dialog title carries the identity: a high-contrast serif at a light
+   weight, against the sans everywhere else. */
 .modal-title {
-  margin-bottom: 10px;
-  font-size: 32px;
-  font-weight: 400;
-  letter-spacing: 0.5px;
-  line-height: normal;
+  margin-bottom: 4px;
+  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  font-size: 40px;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
   text-align: center;
-  color: #272a2f;
+  color: var(--ink);
+}
+
+/* A hairline under the title, inset from the edges, to separate the heading
+   from the controls without a heavy divider. */
+.modal-rule {
+  width: 56px;
+  height: 1px;
+  margin: 18px auto 0;
+  background-color: var(--hairline);
 }
 
 @keyframes modal-overlay-in {
@@ -165,5 +216,46 @@ body {
   .modal-leave .modal-container {
     animation-duration: 0.01ms;
     animation-delay: 0ms;
+  }
+}
+
+/* A configuration change dissolves rather than cuts: the outgoing render sits on
+   top of the incoming one and fades away. */
+@keyframes viewer-dissolve {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.viewer-dissolve {
+  animation: viewer-dissolve 0.45s var(--ease-editorial) forwards;
+}
+
+/* Contact shadow beneath the garment. The renders carry alpha, so a shape behind
+   the image reads as a shadow on the ground rather than a box. Positioned to the
+   hem, which sits a little above the foot of the square. */
+.viewer-contact-shadow {
+  position: absolute;
+  bottom: 9%;
+  left: 50%;
+  width: 40%;
+  height: 22px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    rgba(21, 21, 21, 0.17) 0%,
+    rgba(21, 21, 21, 0.06) 48%,
+    rgba(21, 21, 21, 0) 72%
+  );
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer-dissolve {
+    animation-duration: 0.01ms;
   }
 }

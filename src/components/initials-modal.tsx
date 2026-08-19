@@ -75,7 +75,7 @@ function InitialsForm({
           onChange={(event) => setDraft(normalizeInitials(event.target.value))}
           placeholder="Add initials"
           maxLength={INITIALS_MAX}
-          className="h-11 w-full rounded-[4px] border border-[#ccc] bg-white px-[14px] py-px text-[14px] text-ink placeholder:text-muted focus:border-[#151515] focus:outline-none"
+          className="h-11 w-full border border-hairline bg-white px-[14px] py-px text-[16px] tracking-[0.08em] text-ink transition-colors duration-200 ease-[var(--ease-editorial)] placeholder:tracking-normal placeholder:text-muted focus:border-ink focus:outline-none"
         />
       </div>
 
@@ -83,7 +83,7 @@ function InitialsForm({
         <button
           type="button"
           onClick={() => setDraft("")}
-          className="h-11 w-[250px] rounded-[4px] border border-[#ccc] text-[15px] font-medium text-[#0d0d0d]"
+          className="label-caps h-11 border border-hairline text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white w-[250px]"
         >
           Clear initials
         </button>
@@ -93,7 +93,7 @@ function InitialsForm({
             onApply(draft);
             close();
           }}
-          className="h-11 w-[250px] rounded-[4px] border border-[#151515] bg-[#151515] text-[15px] font-medium text-white"
+          className="label-caps h-11 border border-ink bg-ink text-white transition-colors duration-300 ease-[var(--ease-editorial)] hover:bg-[#2e2e2e] w-[250px]"
         >
           Apply
         </button>

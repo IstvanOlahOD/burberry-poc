@@ -131,7 +131,28 @@ export const PARTS: PartDef[] = [
   },
 ];
 
+/** Display name for the garment. The source config calls this model "Trench". */
+export const MODEL_TITLE = "Trench Coat";
+
+/** How the product is made, shown under the title. */
+export const MODEL_SUBTITLE = "Made to order";
+
 export const PART_ORDER = PARTS.map((part) => part.name);
+
+/**
+ * The human label for a part's current choice — "Oxford", "Burberry" — or null
+ * when an optional part is unset. Used by the specification list, which reads
+ * the configuration back to the customer.
+ */
+export function selectionLabel(
+  partName: string,
+  selection: Selection | null,
+): string | null {
+  if (!selection) return null;
+  const part = PARTS.find((candidate) => candidate.name === partName);
+  const material = part?.materials.find((m) => m.name === selection.material);
+  return material?.colors.find((c) => c.name === selection.color)?.label ?? null;
+}
 
 export function getPart(name: string): PartDef | undefined {
   return PARTS.find((part) => part.name === name);

@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Cormorant_Garamond, Roboto } from "next/font/google";
 import "./globals.css";
 
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+/**
+ * Reserved for display type — dialog titles only. The interface itself stays on
+ * Roboto, whose metrics the replica's spacing was measured against.
+ */
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400"],
 });
 
 export const metadata: Metadata = {
@@ -15,7 +25,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${roboto.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${roboto.variable} ${cormorant.variable} h-full antialiased`}
+    >
       <body className="min-h-full">{children}</body>
     </html>
   );

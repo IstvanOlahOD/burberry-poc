@@ -1,6 +1,13 @@
 "use client";
 
-import { fullSizeLabel } from "@/lib/ripe";
+import {
+  MODEL_SUBTITLE,
+  MODEL_TITLE,
+  PARTS,
+  fullSizeLabel,
+  selectionLabel,
+  type Parts,
+} from "@/lib/ripe";
 import {
   FullscreenIcon,
   RedoIcon,
@@ -9,6 +16,7 @@ import {
 } from "./icons";
 
 type RightColumnProps = {
+  parts: Parts;
   size: number;
   initials: string;
   expanded: boolean;
@@ -37,9 +45,11 @@ function OutlinedButton({
     <button
       type="button"
       onClick={onClick}
-      className="mb-[10px] flex h-[46px] w-full items-center justify-between rounded-[4px] border border-ink px-5 text-[14px] font-medium text-ink transition-colors hover:bg-ink/5"
+      /* Squared with a hairline edge, and the hover fills to ink rather than
+         tinting — a definite state change reads more considered than a wash. */
+      className="group mb-[10px] flex h-[46px] w-full items-center justify-between border border-hairline px-5 text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white"
     >
-      <span>{children}</span>
+      <span className="label-caps">{children}</span>
       {trailing}
     </button>
   );
@@ -71,7 +81,44 @@ function IconButton({
   );
 }
 
+/**
+ * Reads the configuration back as a specification list. The column had a lot of
+ * empty space below Details, and a spec sheet is what a considered product page
+ * puts there — it also means the current choices are legible without opening
+ * the picker.
+ */
+function Specification({ parts }: { parts: Parts }) {
+  return (
+    <div className="mt-6 border-t border-hairline pt-5">
+      <h3 className="label-caps mb-1 text-ink">Specification</h3>
+      <dl>
+        {PARTS.map((part) => {
+          const chosen = selectionLabel(part.name, parts[part.name] ?? null);
+          return (
+            <div
+              key={part.name}
+              className="flex items-baseline justify-between border-b border-hairline py-[7px] last:border-b-0"
+            >
+              <dt className="text-[12px] tracking-[0.04em] text-foreground">
+                {part.label}
+              </dt>
+              <dd
+                className={`text-[12px] tracking-[0.04em] ${
+                  chosen ? "text-ink" : "text-muted"
+                }`}
+              >
+                {chosen ?? "None"}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
+
 export function RightColumn({
+  parts,
   size,
   initials,
   expanded,
@@ -87,7 +134,16 @@ export function RightColumn({
   onFullscreen,
 }: RightColumnProps) {
   return (
-    <div className="w-[250px]">
+    <div className="w-full">
+      {/* The page never named the garment. A configurator without a product
+          title reads as a tool; with one it reads as a product page. */}
+      <div className="mb-7">
+        <h1 className="font-serif text-[30px] leading-[1.1] font-light text-ink">
+          {MODEL_TITLE}
+        </h1>
+        <p className="label-caps mt-[10px] text-muted">{MODEL_SUBTITLE}</p>
+      </div>
+
       <OutlinedButton onClick={onOpenInitials}>
         {initials ? `Initials - ${initials}` : "Add initials"}
       </OutlinedButton>
@@ -122,10 +178,12 @@ export function RightColumn({
         </div>
       </div>
 
-      <div className="mt-4">
-        <h3 className="mb-[10px] text-[15px] font-medium tracking-[0.25px] text-foreground">
-          Details
-        </h3>
+      <Specification parts={parts} />
+
+      {/* A hairline above the section replaces the bare heading, giving the
+          column a base line to sit on. */}
+      <div className="mt-6 border-t border-hairline pt-5">
+        <h3 className="label-caps mb-[14px] text-ink">Details</h3>
         <p className="mb-[10px] text-[12px] leading-[18px] text-foreground">
           The image serves as an indication, and the final product may have small
           differences in the shades of color or material.

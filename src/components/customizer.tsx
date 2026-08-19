@@ -97,7 +97,7 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
   return (
     <div
       ref={fullscreenRef}
-      className="flex h-dvh flex-col overflow-hidden bg-background"
+      className="flex min-h-dvh flex-col bg-background"
     >
       <div className="flex min-h-0 flex-1 justify-center bg-background">
         {/* The source caps the stage at 1500px of content behind a 12px left
@@ -120,8 +120,9 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
             onHintDismiss={() => setShowHint(false)}
           />
 
-          <aside className="w-[262px] shrink-0 overflow-y-auto pt-[110px] pr-3 pb-[53px]">
+          <aside className="w-[262px] shrink-0 pt-[110px] pr-3 pb-[53px]">
             <RightColumn
+              parts={current.parts}
               size={current.size}
               initials={current.initials}
               expanded={expanded}

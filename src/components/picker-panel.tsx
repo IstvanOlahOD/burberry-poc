@@ -29,7 +29,7 @@ export function PickerPanel({
     materials[0];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 bg-[rgba(250,250,250,0.96)]">
+    <div className="fixed inset-x-0 bottom-0 z-10 border-t border-hairline bg-[rgba(250,249,247,0.88)] backdrop-blur-md">
       <button
         type="button"
         onClick={onClose}
@@ -52,10 +52,14 @@ export function PickerPanel({
                   type="button"
                   onClick={() => onSelectPart(part.name)}
                   aria-pressed={isActive}
-                  className="group flex items-center p-4 leading-none"
+                  /* A hairline under the open part, so the row reads as tabs
+                     rather than as text that happens to change colour. */
+                  className={`group relative flex items-center p-4 leading-none after:absolute after:inset-x-4 after:bottom-[6px] after:h-px after:bg-ink after:transition-opacity ${
+                    isActive ? "after:opacity-100" : "after:opacity-0"
+                  }`}
                 >
                   <span
-                    className={`text-[14px] font-medium transition-colors duration-100 ease-in-out group-hover:text-[#151515] ${
+                    className={`text-[14px] font-medium tracking-[0.05em] transition-colors duration-100 ease-in-out group-hover:text-[#151515] ${
                       isActive ? "text-[#151515]" : "text-muted"
                     }`}
                   >
@@ -148,7 +152,7 @@ export function PickerPanel({
                         />
                       </span>
                       <span
-                        className={`mt-[18px] block text-[12px] leading-[14px] font-medium transition-colors duration-100 ease-in-out ${
+                        className={`mt-[18px] block text-[12px] leading-[14px] font-medium tracking-[0.06em] transition-colors duration-100 ease-in-out ${
                           isActive
                             ? "text-[#151515]"
                             : "text-muted group-hover:text-[#151515]"
@@ -177,7 +181,7 @@ export function PickerPanel({
                       }`}
                     />
                     <span
-                      className={`mt-[18px] block text-[12px] leading-[14px] font-medium transition-colors duration-100 ease-in-out ${
+                      className={`mt-[18px] block text-[12px] leading-[14px] font-medium tracking-[0.06em] transition-colors duration-100 ease-in-out ${
                         currentSelection
                           ? "text-muted group-hover:text-[#151515]"
                           : "text-[#151515]"

@@ -24,7 +24,7 @@ function StartOverBody({ onConfirm }: { onConfirm: () => void }) {
         <button
           type="button"
           onClick={close}
-          className="h-11 w-[250px] rounded-[4px] border border-[#ccc] text-[15px] font-medium text-[#0d0d0d]"
+          className="label-caps h-11 border border-hairline text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white w-[250px]"
         >
           Continue customizing
         </button>
@@ -34,7 +34,7 @@ function StartOverBody({ onConfirm }: { onConfirm: () => void }) {
             onConfirm();
             close();
           }}
-          className="h-11 w-[250px] rounded-[4px] border border-[#151515] bg-[#151515] text-[15px] font-medium text-white"
+          className="label-caps h-11 border border-ink bg-ink text-white transition-colors duration-300 ease-[var(--ease-editorial)] hover:bg-[#2e2e2e] w-[250px]"
         >
           Reset customization
         </button>
