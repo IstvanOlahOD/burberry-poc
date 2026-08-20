@@ -1,29 +1,53 @@
 # burberry-poc
 
-A Next.js replica of the Platforme "RIPE White" trench coat configurator, dressed in
-Burberry's own interface language rather than the source's.
+An in-store **advisor configurator** for the bespoke trench: a Next.js app that
+drives the Platforme "RIPE White" trench model from a consultation layout, with
+every option backed by a real call to the RIPE sandbox.
 
-Reference page:
+Reference page for the underlying model:
 `https://ripe-white-sbx.platforme.com/?brand=burberry_tech&model=trench&locale=en_us&format=webp&gender=female&size=30&scale=eu&p=body:gabardine:oxford&p=buttons:buttons:honey&p=lining:lining:honey&p=stitching:stitching:honey`
 
 ## What it does
 
-- A 64px masthead carrying the wordmark, over a three-column stage: frame
-  thumbnails, turntable viewer, controls column
-- 72-frame drag rotation over the `side` face, at the same ~6px-per-frame
-  sensitivity as the reference, with the rest of the turntable warmed in the
-  background one frame at a time
-- Bottom picker: body, buttons, stitching, lining, plus the optional embroidery and
-  label patch, each with its swatch rail and a "No <part>" option
-- Initials, size (EU 35–42), undo/redo, start over, fullscreen and show/hide filters
-- The query string tracks the customization, so a configuration stays shareable
+- Masthead with the wordmark and appointment context, over a three-column stage:
+  `172px` consultation rail, render canvas, `292px` options column
+- **Consultation rail** — one step per option card, so it never points at a panel
+  that is not there; a tick means a choice is recorded, and clicking a step
+  scrolls to its panel
+- **Canvas** — the 72-frame turntable, drag to rotate at the reference's
+  ~6px-per-frame, with named views (front, three-quarter, side, back) and the
+  rest of the turn warmed in the background
+- **Options column** — style, outer colour, buttons and stitching, each with
+  rendered swatch chips, over an indicative price panel
+- **RIPE API inspector** — the render and swatch calls the app actually fires,
+  each expandable to the upstream URL it rebuilds
+- **Order sheet** — the configuration read back as a summary plus the payload an
+  order import would carry
+- The query string tracks the configuration, so a consultation stays shareable
 
-## Brand system
+The model also exposes lining, embroidery and label patch, and the state carries
+initials and a size. Those have no card in this layout: they keep their model
+defaults — a honey lining, no embroidery, no patch — and still travel in the
+render URL and the order payload. Adding one back means adding its name to
+`VISIBLE_PARTS` in [`options.tsx`](src/components/options.tsx) and a matching
+entry to `STEPS` in [`steps-nav.tsx`](src/components/steps-nav.tsx).
 
-The interface language is measured from `us.burberry.com` — the homepage and a
-trench coat PDP — rather than inferred. Sampling every rendered element that
-carries its own text, the brand turns out to be far more restrained than a
-"luxury configurator" instinct suggests:
+## Layout
+
+The stage follows the advisor-configurator design: a warm paper ground
+(`#f7f4ee`), white panels on `#e4dfd6` hairlines, a honey accent (`#c9a876`) on
+the primary action, and letterspaced uppercase labels.
+
+That is a deliberate departure from burberry.com, which is the opposite on every
+one of those axes. The measurements below are kept because they are the public
+site's actual behaviour and are what to come back to if this ever has to read as
+a shop page rather than a store tool.
+
+<details>
+<summary>Measured from us.burberry.com — the public site's own system</summary>
+
+Sampled across the homepage and a trench coat PDP, every rendered element that
+carries its own text:
 
 | | Value |
 | --- | --- |
@@ -38,20 +62,19 @@ carries its own text, the brand turns out to be far more restrained than a
 | `text-transform` | `none`, on all 845 elements sampled |
 | `border-radius` | `0` |
 
-Two findings drove the work. First, **nothing is uppercased or letterspaced
-anywhere on burberry.com.** An earlier pass here had leaned on 11px uppercase
-labels tracked at `0.14em` for every button and section heading, on the
-assumption that wide small caps read as editorial. Against the real brand they
-read as someone else's. Second, **the brand leads with its serif and demotes the
-sans to utility** — the opposite of this build, which set the whole interface in
-Roboto and reserved a serif for dialog titles at 40px, a size that appears
-nowhere on their site.
+Two things stand out. First, **nothing is uppercased or letterspaced anywhere on
+burberry.com** — `letter-spacing: normal` and `text-transform: none` on all 845
+elements sampled. Second, **the site leads with its serif and demotes the sans to
+utility**; even the price is set in the serif at 20px, and no heading anywhere,
+including the homepage hero, is larger than that.
 
-So the page now runs on three type roles and nothing else, defined in
-[`globals.css`](src/app/globals.css) as `.brand-heading`, `.brand-label` and
-`.brand-label-lg`.
+The advisor design goes the other way on both counts, which is a reasonable
+choice for a tool used across a desk rather than a page used by a customer — but
+worth knowing it is a choice, not an inheritance.
 
-### The faces
+</details>
+
+## The faces
 
 The brand's own fonts are self-hosted from [`src/app/fonts`](src/app/fonts) and
 registered with `next/font/local` in [`layout.tsx`](src/app/layout.tsx). The
@@ -94,7 +117,10 @@ Renders and swatches are requested from the public Platforme sandbox at
 `ripe-core-sbx.platforme.com` (`/api/compose`, `/api/swatch`) — the same endpoints the
 reference page uses. No product imagery is bundled with this repo, and there is no
 build-time dependency on that service. The model definition (parts, materials,
-colours, thumbnail frames, size scale) lives in [`src/lib/ripe.ts`](src/lib/ripe.ts).
+colours, size scale) lives in [`src/lib/ripe.ts`](src/lib/ripe.ts). `THUMBNAIL_FRAMES`
+and `THUMBNAIL_SIZE` are still exported and still allowed by the render route, so
+old thumbnail URLs resolve, but nothing requests or pre-warms them any more — the
+thumbnail rail was replaced by the canvas's named views.
 
 Because the frames are hand-swapped for the turntable, the viewer uses plain `<img>`
 elements rather than `next/image`.
@@ -165,11 +191,30 @@ encoder is ever revisited. Note that changing the background does **not** call
 for a `RENDER_REVISION` bump: the bytes behind a render URL are unchanged, only
 what they composite over.
 
-Resolution follows the display. The viewer box is 720 CSS px, so a flat 1000
-over-fetched on 1x and under-sampled on 2x; both are offered via `srcSet`
-(`1x`/`2x`) and the browser picks. Offering them through `srcSet` rather than
-reading `devicePixelRatio` during render keeps server and client markup
-identical, which hydration requires.
+Resolution follows the display. The render sits in `.render-wrap`, which caps at
+**380 CSS px**, so 380 and 760 are offered via `srcSet` (`1x`/`2x`) and the
+browser picks. Offering them through `srcSet` rather than reading
+`devicePixelRatio` during render keeps server and client markup identical, which
+hydration requires.
+
+This pair was 720/1440 while the stage filled a 720px column. Against a 380px box
+that was about four times the pixels needed, on every frame of a 72-frame turn —
+the largest single waste in the app. Measured per frame against the dev server:
+
+| Requested | Bytes | vs before |
+| --- | --- | --- |
+| 380 (1x, was 720) | 12.4 KB | −55% |
+| 760 (2x, was 1440) | 30.1 KB | −60% |
+
+**Keep `VIEWER_SIZE` in step with `.render-wrap`'s max-width.** They are two
+halves of one decision, and if the box grows past the requested size the render
+starts upscaling.
+
+Superseded sizes stay in `ALLOWED_SIZES` rather than being removed: responses are
+`immutable` for a year, so URLs already in the store and on the CDN have to keep
+resolving. The new sizes are new URLs, so this needed no `RENDER_REVISION` bump —
+but it does start a cold namespace, so **re-run the pre-warm** or the first
+visitor pays the upstream render for every frame.
 
 Measured in the browser, a full 72-frame turntable:
 
@@ -177,7 +222,12 @@ Measured in the browser, a full 72-frame turntable:
 | --- | --- |
 | WebP @1000 (originally, all clients) | ~5200 KB |
 | WebP @720 | 2498 KB |
-| AVIF @720, transcoded | **1188 KB** |
+| AVIF @720, transcoded | 1188 KB |
+| AVIF @380, right-sized for the box | **663 KB** |
+
+The last row is the 72 frames the viewer actually warms on a 1x display, read off
+the Resource Timing entries rather than estimated — so a full turn now costs
+about a quarter of what it did before the transcode and the right-sizing.
 
 Format travels in the URL rather than behind `Vary: Accept`, because Vercel's
 `Vary` handling is limited and a mis-negotiated format is a broken image. Clients
@@ -237,8 +287,8 @@ Two scopes, answering different problems:
 
 | Scope | Covers | URLs | Runs |
 | --- | --- | --- | --- |
-| `deploy` | landing configuration, all 72 frames at both resolutions, thumbnails, every swatch, empty preview | 163 | manually, after a deploy |
-| `variants` | all 486 filter combinations, frames per `stride` + thumbnails | 7,290 at stride 6 | once |
+| `deploy` | landing configuration, all 72 frames at both resolutions, every swatch, empty preview | 160 | manually, after a deploy |
+| `variants` | all 486 option combinations, frames per `stride` | 5,832 at stride 6 | once |
 
 `deploy` warms the CDN edge, which is what a deployment resets. `variants`
 populates the durable store so any colour combination is fast permanently — a
@@ -266,7 +316,7 @@ allowlisted so the parameter cannot mint unbounded URL sets.
 
 ```bash
 STRIDE=1 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
-STRIDE=1 SIZES=720,1440 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
+STRIDE=1 SIZES=380,760 node scripts/prewarm.mjs https://burberry-poc.vercel.app variants
 ```
 
 It exits non-zero if any URL fails, so a broken render surfaces in CI rather than

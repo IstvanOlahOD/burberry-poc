@@ -12,7 +12,7 @@ import {
   type Format,
   type Parts,
 } from "@/lib/ripe";
-import { DragHintGraphic } from "./icons";
+
 
 /** Horizontal drag distance that advances the turntable by one frame. */
 const PIXELS_PER_FRAME = 6;
@@ -252,33 +252,22 @@ export function Viewer({
   };
 
   return (
-    /* The columns row is as tall as the right column, which now runs past the
-       viewport — centring inside it pushed the garment below the fold and behind
-       the picker. Sticking to the top and sizing against the visible area keeps
-       the whole coat in view while the specification scrolls past it; the
-       masthead is subtracted alongside the picker so a sticky header does not
-       crop the hem.
-
-       The stage stays on the page white. Burberry does sit product imagery on
-       #f6f6f6, but there that panel is full-bleed to the viewport edge; bounded
-       by a white rail on either side, as it would be here, it reads as a stray
-       grey box rather than a ground. The contact shadow is what grounds the
-       coat. */
-    <div className="sticky top-[var(--header-height)] flex h-[calc(100dvh-var(--picker-height)-var(--header-height))] min-w-0 flex-1 items-center justify-center self-start">
-      <div
-        ref={containerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onKeyDown={onKeyDown}
-        tabIndex={0}
-        role="group"
-        aria-label="Trench coat, 360 degree view. Drag or use the arrow keys to rotate."
-        /* Fixed 720px square, as in the source; it only shrinks when the
-           window is too short to hold it rather than cropping the render. */
-        className="relative aspect-square h-[min(720px,100%)] max-w-full cursor-grab touch-none select-none active:cursor-grabbing"
-      >
+    /* A square that fills whatever the canvas gives it, rather than the old
+       full-height sticky stage: in the advisor layout the render sits inside
+       `.render-wrap`, which caps the width. The renders carry alpha, so the
+       panel white shows through and the contact shadow grounds the coat. */
+    <div
+      ref={containerRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+      role="group"
+      aria-label="Trench coat, 360 degree view. Drag or use the arrow keys to rotate."
+      className="relative aspect-square w-full cursor-grab touch-none select-none active:cursor-grabbing"
+    >
         {/* Sits behind the garment and shows only outside its silhouette, since
             the renders carry alpha. Grounds the coat instead of letting it float
             on the page. */}
@@ -328,26 +317,16 @@ export function Viewer({
           />
         )}
 
-        {/* Turntable hint: a 52px band overhanging the foot of the render,
-            with the dotted ring straddling it. Offsets and the 1s fade are the
-            source's. */}
-        <div
-          className={`pointer-events-none absolute inset-x-0 -bottom-[23px] h-[52px] transition-opacity duration-1000 ${
-            showHint ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {/* Untracked and in sentence case, like every other label on the site;
-              the source's 2px-tracked semibold caps was the loudest remaining
-              piece of non-brand type on the stage. */}
-          <span className="brand-label absolute inset-x-0 top-0 text-center text-[11px] leading-[13px] text-[#a6a6a6]">
-            Drag
-          </span>
-          <DragHintGraphic className="absolute -top-[42px] left-1/2 h-[77px] w-[543px] max-w-full -translate-x-1/2 text-[#a6a6a6]" />
-          <span className="brand-label absolute inset-x-0 bottom-0 text-center text-[11px] leading-[13px] text-[#a6a6a6]">
-            3D
-          </span>
-        </div>
-      </div>
+      {/* The old hint was a 543px dotted-ring graphic, which does not fit the
+          canvas's 380px render box — and the caption under the frame controls
+          already says the viewport rotates. A single fading label is enough. */}
+      <span
+        className={`eyebrow pointer-events-none absolute inset-x-0 bottom-1 text-center transition-opacity duration-1000 ${
+          showHint ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        Drag to rotate
+      </span>
     </div>
   );
 }

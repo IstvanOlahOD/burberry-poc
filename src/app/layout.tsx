@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { SiteHeader } from "@/components/site-header";
+
 import "./globals.css";
 
 /**
@@ -46,8 +46,8 @@ const brandSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Trench Coat | Burberry",
-  description: "Customise your trench coat — made to order.",
+  title: "Bespoke Trench | Burberry",
+  description: "In-store advisor configurator for the bespoke trench.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -56,10 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${brandSans.variable} ${brandSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full">
-        <SiteHeader />
-        {children}
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

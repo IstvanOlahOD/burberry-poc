@@ -32,7 +32,7 @@ const SCOPE = process.argv[3] || process.env.SCOPE || "deploy";
 /** variants only: 6 covers a twelfth of each turn, 1 covers every frame. */
 const STRIDE = process.env.STRIDE || "";
 
-/** variants only: "720", "1440" or "720,1440". */
+/** variants only: one of the sizes the viewer requests — see ALLOWED_SIZE_SETS. */
 const SIZES = process.env.SIZES || "";
 
 /** Matches the client's warm pool; the render service multiplexes these fine. */

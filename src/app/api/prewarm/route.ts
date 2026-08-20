@@ -3,8 +3,6 @@ import {
   FRAME_COUNT,
   PARTS,
   RENDER_REVISION,
-  THUMBNAIL_FRAMES,
-  THUMBNAIL_SIZE,
   VIEWER_SIZE,
   VIEWER_SIZE_RETINA,
   composeUrl,
@@ -44,11 +42,15 @@ const COARSE_STRIDE = 6;
  */
 const ALLOWED_STRIDES = [1, 2, 3, 4, 6, 8, 12, 24];
 
-/** Resolutions the variants scope may be asked for, matching `srcSet`. */
+/**
+ * Resolutions the variants scope may be asked for, matching `srcSet`. Keyed off
+ * the constants rather than written out, so the accepted `sizes` values cannot
+ * drift from what the viewer actually requests.
+ */
 const ALLOWED_SIZE_SETS: Record<string, number[]> = {
-  "720": [VIEWER_SIZE],
-  "1440": [VIEWER_SIZE_RETINA],
-  "720,1440": [VIEWER_SIZE, VIEWER_SIZE_RETINA],
+  [String(VIEWER_SIZE)]: [VIEWER_SIZE],
+  [String(VIEWER_SIZE_RETINA)]: [VIEWER_SIZE_RETINA],
+  [`${VIEWER_SIZE},${VIEWER_SIZE_RETINA}`]: [VIEWER_SIZE, VIEWER_SIZE_RETINA],
 };
 
 /**
@@ -86,13 +88,7 @@ function deployScope(): string[] {
     }
   }
 
-  for (const frame of THUMBNAIL_FRAMES) {
-    urls.push(
-      composeUrl({ parts: DEFAULT_PARTS, frame, size: THUMBNAIL_SIZE }),
-    );
-  }
-
-  // Every swatch in the picker; they all render when the panel first opens.
+  // Every swatch on the option cards; they all render when the column paints.
   for (const part of PARTS) {
     for (const material of part.materials) {
       for (const color of material.colors) {
@@ -113,9 +109,6 @@ function variantScope(stride: number, sizes: number[]): string[] {
       for (const size of sizes) {
         urls.push(composeUrl({ parts, frame: frameName(frame), size }));
       }
-    }
-    for (const frame of THUMBNAIL_FRAMES) {
-      urls.push(composeUrl({ parts, frame, size: THUMBNAIL_SIZE }));
     }
   }
   return urls;

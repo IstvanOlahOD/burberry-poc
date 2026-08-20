@@ -1,43 +1,65 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PARTS, frameIndex, type Selection } from "@/lib/ripe";
 import {
-  DEFAULT_CUSTOMIZATION,
+  composeUrl,
+  frameIndex,
+  frameName,
+  swatchUrl,
+  upstreamComposeUrl,
+  upstreamSwatchUrl,
+  VIEWER_SIZE,
+  type Selection,
+} from "@/lib/ripe";
+import {
   queryFromCustomization,
   sameCustomization,
   type Customization,
 } from "@/lib/state";
-import { Details } from "./details";
-import { InitialsModal } from "./initials-modal";
-import { PickerPanel } from "./picker-panel";
-import { RightColumn } from "./right-column";
-import { SizeModal } from "./size-modal";
-import { StartOverModal } from "./start-over-modal";
-import { Thumbnails } from "./thumbnails";
-import { Viewer } from "./viewer";
+import { AdvisorBar } from "./advisor-bar";
+import { ApiInspector, type LogEntry } from "./api-inspector";
+import { Canvas } from "./canvas";
+import { Options } from "./options";
+import { OrderSheet, orderPayload } from "./order-sheet";
+import { PricePanel } from "./price-panel";
+import { StepsNav } from "./steps-nav";
 
 type CustomizerProps = {
   initial: Customization;
   initialFrame: string;
 };
 
+/** Newest first, and bounded so a long consultation cannot grow without limit. */
+const LOG_LIMIT = 40;
+
 export function Customizer({ initial, initialFrame }: CustomizerProps) {
+  /**
+   * The configuration, kept as a history even though nothing steps through it
+   * any more: the undo/redo controls are gone from the canvas. Holding the trail
+   * costs one entry per change and means restoring those controls is a matter of
+   * re-adding the buttons, not rebuilding the state.
+   */
   const [history, setHistory] = useState({ entries: [initial], cursor: 0 });
   const [index, setIndex] = useState(() => frameIndex(initialFrame));
-  const [selectedPart, setSelectedPart] = useState<string | null>(
-    PARTS[0].name,
-  );
-  const [expanded, setExpanded] = useState(false);
-  const [modal, setModal] = useState<"initials" | "size" | "start-over" | null>(
-    null,
-  );
+  const [orderOpen, setOrderOpen] = useState(false);
   const [showHint, setShowHint] = useState(true);
-  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const [activeStep, setActiveStep] = useState("p-body");
+  const [log, setLog] = useState<LogEntry[]>([]);
+  const logId = useRef(0);
 
   const current = history.entries[history.cursor];
-  const canUndo = history.cursor > 0;
-  const canRedo = history.cursor < history.entries.length - 1;
+
+  /**
+   * Records a call in the inspector. These are the requests the app really
+   * makes — the app's own `/api/render`, with the upstream RIPE URL it rebuilds
+   * shown in the expanded detail — except where `hypothetical` says otherwise.
+   */
+  const record = useCallback((entry: Omit<LogEntry, "id">) => {
+    setLog((entries) => {
+      const next = [{ ...entry, id: logId.current++ }, ...entries];
+      return next.slice(0, LOG_LIMIT);
+    });
+  }, []);
 
   /** Pushes a new state, dropping anything that was ahead of the cursor. */
   const commit = useCallback((next: Customization) => {
@@ -50,130 +72,133 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
     });
   }, []);
 
-  const undo = useCallback(() => {
-    setHistory((state) => ({
-      ...state,
-      cursor: Math.max(0, state.cursor - 1),
-    }));
-  }, []);
-
-  const redo = useCallback(() => {
-    setHistory((state) => ({
-      ...state,
-      cursor: Math.min(state.entries.length - 1, state.cursor + 1),
-    }));
-  }, []);
-
-  // Keep the address bar in step with the customization, as the source
-  // configurator does, so a configuration stays shareable.
+  // Keep the address bar in step with the configuration, so it stays shareable.
   useEffect(() => {
     window.history.replaceState(null, "", queryFromCustomization(current));
   }, [current]);
 
-  // The turntable hint fades on its own if the model is never dragged.
+  // The turntable hint fades on its own if the coat is never dragged.
   useEffect(() => {
-    const handle = window.setTimeout(() => setShowHint(false), 2000);
+    const handle = window.setTimeout(() => setShowHint(false), 2400);
     return () => window.clearTimeout(handle);
   }, []);
 
-  const onSelectPart = (name: string) => {
-    setSelectedPart(name);
-    setExpanded(true);
-  };
+  // The frame request the page opens with. Guarded against StrictMode's double
+  // invoke so the log does not start with the same line twice.
+  const loggedInitial = useRef(false);
+  useEffect(() => {
+    if (loggedInitial.current) return;
+    loggedInitial.current = true;
+    const frame = frameName(index);
+    record({
+      method: "GET",
+      url: composeUrl({ parts: current.parts, frame, size: VIEWER_SIZE }),
+      why: "initial frame",
+      detail: `rebuilt upstream →\n${upstreamComposeUrl(
+        current.parts,
+        frame,
+        VIEWER_SIZE,
+        "webp",
+      )}`,
+    });
+    // Intentionally once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSelect = (name: string, selection: Selection | null) => {
     commit({ ...current, parts: { ...current.parts, [name]: selection } });
+
+    if (selection) {
+      record({
+        method: "GET",
+        url: swatchUrl(selection.material, selection.color),
+        why: `${name} swatch`,
+        detail: `rebuilt upstream →\n${upstreamSwatchUrl(
+          selection.material,
+          selection.color,
+        )}`,
+      });
+    }
+
+    const nextParts = { ...current.parts, [name]: selection };
+    const frame = frameName(index);
+    record({
+      method: "GET",
+      url: composeUrl({ parts: nextParts, frame, size: VIEWER_SIZE }),
+      why: "re-render viewport",
+      detail: `rebuilt upstream →\n${upstreamComposeUrl(
+        nextParts,
+        frame,
+        VIEWER_SIZE,
+        "webp",
+      )}`,
+    });
   };
 
-  const onFullscreen = () => {
-    // Fullscreen renders only the target's subtree, so this has to be the root
-    // that also holds the picker panel and the dialogs. Targeting the columns
-    // alone left the filters — and every modal — invisible.
-    const root = fullscreenRef.current;
-    if (!root) return;
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void root.requestFullscreen();
+  const onFrame = (next: number) => {
+    setIndex(next);
+    const frame = frameName(next);
+    record({
+      method: "GET",
+      url: composeUrl({ parts: current.parts, frame, size: VIEWER_SIZE }),
+      why: `frame ${frame}`,
+      detail: `rebuilt upstream →\n${upstreamComposeUrl(
+        current.parts,
+        frame,
+        VIEWER_SIZE,
+        "webp",
+      )}`,
+    });
+  };
+
+  const onReview = () => {
+    record({
+      method: "POST",
+      url: "/api/orders/import",
+      why: "create production order",
+      hypothetical: true,
+      detail: JSON.stringify(orderPayload(current), null, 1),
+    });
+    setOrderOpen(true);
+  };
+
+  const onStepSelect = (id: string) => {
+    setActiveStep(id);
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
   };
 
   return (
-    <div
-      ref={fullscreenRef}
-      className="flex min-h-[calc(100dvh-var(--header-height))] flex-col bg-background"
-    >
-      <div className="flex min-h-0 flex-1 justify-center bg-background">
-        {/* The source caps the stage at 1500px of content behind a 12px left
-            inset and centres it; the rails hold 250px and the viewer column
-            takes whatever is left. */}
-        <div className="flex w-full max-w-[1512px] pl-3">
-          <aside className="flex w-[250px] shrink-0 flex-col pt-[46px] pb-[53px]">
-            <Thumbnails
-              parts={current.parts}
-              index={index}
-              onIndexChange={setIndex}
-            />
-            <Details />
-          </aside>
+    <div className="frame">
+      <AdvisorBar />
 
-          <Viewer
-            parts={current.parts}
-            index={index}
-            onIndexChange={setIndex}
-            showHint={showHint}
-            onHintDismiss={() => setShowHint(false)}
-          />
+      <div className="stage">
+        <StepsNav
+          current={current}
+          activeId={activeStep}
+          onSelect={onStepSelect}
+        />
 
-          <aside className="w-[262px] shrink-0 pt-[46px] pr-3 pb-[53px]">
-            <RightColumn
-              parts={current.parts}
-              size={current.size}
-              initials={current.initials}
-              expanded={expanded}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              canStartOver={!sameCustomization(current, DEFAULT_CUSTOMIZATION)}
-              onOpenInitials={() => setModal("initials")}
-              onOpenSize={() => setModal("size")}
-              onToggleFilters={() => setExpanded((value) => !value)}
-              onUndo={undo}
-              onRedo={redo}
-              onStartOver={() => setModal("start-over")}
-              onFullscreen={onFullscreen}
-            />
-          </aside>
-        </div>
+        <Canvas
+          parts={current.parts}
+          index={index}
+          onIndexChange={onFrame}
+          showHint={showHint}
+          onHintDismiss={() => setShowHint(false)}
+        />
+
+        <aside>
+          <Options current={current} onSelect={onSelect} />
+          <PricePanel current={current} onReview={onReview} />
+        </aside>
       </div>
 
-      <PickerPanel
-        parts={current.parts}
-        selectedPart={selectedPart}
-        expanded={expanded}
-        onSelectPart={onSelectPart}
-        onSelect={onSelect}
-        onClose={() => setExpanded(false)}
-      />
+      <ApiInspector entries={log} />
 
-      {modal === "initials" ? (
-        <InitialsModal
-          parts={current.parts}
-          initials={current.initials}
-          onClose={() => setModal(null)}
-          onApply={(initials) => commit({ ...current, initials })}
-        />
-      ) : null}
-
-      {modal === "size" ? (
-        <SizeModal
-          size={current.size}
-          onClose={() => setModal(null)}
-          onSelect={(size) => commit({ ...current, size })}
-        />
-      ) : null}
-
-      {modal === "start-over" ? (
-        <StartOverModal
-          onClose={() => setModal(null)}
-          onConfirm={() => commit(DEFAULT_CUSTOMIZATION)}
-        />
+      {orderOpen ? (
+        <OrderSheet current={current} onClose={() => setOrderOpen(false)} />
       ) : null}
     </div>
   );

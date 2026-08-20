@@ -39,18 +39,18 @@ export function isFormat(value: string): value is Format {
 export const FRAME_COUNT = 72;
 
 /**
- * The viewer box is 720 CSS px, so a 1x display needs 720 and a 2x display
- * 1440. Requesting a flat 1000 over-fetched on the former and under-sampled on
- * the latter.
+ * The render sits in `.render-wrap`, which caps at 380 CSS px, so a 1x display
+ * needs 380 and a 2x display 760. Both are offered through `srcSet` and the
+ * browser picks; reading `devicePixelRatio` at render time instead would make
+ * server and client markup differ, which hydration will not allow.
+ *
+ * These were 720/1440 while the stage filled a 720px column. Against a 380px box
+ * that was roughly four times the pixels needed on every frame of a 72-frame
+ * turn — the single largest waste in the app. Keep them in step with
+ * `.render-wrap`'s max-width in `globals.css`.
  */
-export const VIEWER_SIZE = 720;
-export const VIEWER_SIZE_RETINA = 1440;
-
-/** Resolution for the current display; falls back to 1x during SSR. */
-export function viewerSize(): number {
-  if (typeof window === "undefined") return VIEWER_SIZE;
-  return window.devicePixelRatio >= 2 ? VIEWER_SIZE_RETINA : VIEWER_SIZE;
-}
+export const VIEWER_SIZE = 380;
+export const VIEWER_SIZE_RETINA = 760;
 
 /** Resolution requested for the left rail thumbnails (2x of the 76px box). */
 export const THUMBNAIL_SIZE = 204;
@@ -252,14 +252,21 @@ const RENDER_PROXY = "/api/render";
  */
 export const RENDER_REVISION = "2";
 
-/** Only the resolutions the app asks for, so the cache can't be flooded. 1000
- * is retained because URLs at that size are already cached from before the
- * switch to DPR-aware sizing. */
+/**
+ * Only the resolutions the app asks for, so the cache can't be flooded.
+ *
+ * The superseded sizes stay on the list rather than being dropped: responses are
+ * `immutable` for a year, so URLs already in the durable store and on the CDN
+ * must keep resolving. 720/1440 were the pair while the stage was 720 CSS px,
+ * and 1000 predates DPR-aware sizing altogether.
+ */
 export const ALLOWED_SIZES = [
   THUMBNAIL_SIZE,
   VIEWER_SIZE,
-  1000,
   VIEWER_SIZE_RETINA,
+  720,
+  1000,
+  1440,
 ];
 
 /** Size for the personalisation preview, shown in a 300px box. */
