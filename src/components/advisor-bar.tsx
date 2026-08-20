@@ -1,4 +1,4 @@
-import { BurberryWordmark } from "./burberry-wordmark";
+
 
 /**
  * Appointment context for the masthead.
@@ -22,9 +22,8 @@ export function AdvisorBar() {
             artwork is available, so it is used instead, with the tool's own name
             beside it behind a hairline. */}
         <div className="flex items-baseline gap-4">
-          <BurberryWordmark className="h-[18px] w-[112px] shrink-0 text-ink" />
           <span
-            className="display border-l border-hairline pl-4 text-[15px] tracking-[0.2em] uppercase"
+            className="display  text-[26px] tracking-[0.2em] uppercase"
             style={{ lineHeight: 1 }}
           >
             Bespoke Trench
