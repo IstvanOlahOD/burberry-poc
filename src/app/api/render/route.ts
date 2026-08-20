@@ -157,8 +157,8 @@ export async function GET(request: Request): Promise<Response> {
   const key = renderKey(target.url, target.transcode ? "avif" : "webp");
 
   const stored = await readRender(key);
-  if (stored) {
-    return new Response(stored, {
+  if (stored.status === "hit") {
+    return new Response(stored.bytes, {
       headers: {
         "content-type": contentType,
         "cache-control": IMMUTABLE,
@@ -166,6 +166,11 @@ export async function GET(request: Request): Promise<Response> {
       },
     });
   }
+
+  // A read that errored rather than simply missing is reported, so a store that
+  // is unreachable or unauthorised cannot pass for one that is merely empty.
+  const storeStatus: Record<string, string> =
+    stored.status === "error" ? { "x-store-status": "error" } : {};
 
   let upstream: Response;
   try {
@@ -199,6 +204,7 @@ export async function GET(request: Request): Promise<Response> {
         "content-type": upstream.headers.get("content-type") ?? contentType,
         "cache-control": IMMUTABLE,
         "x-render-source": "upstream",
+        ...storeStatus,
       },
     });
   }
@@ -220,6 +226,7 @@ export async function GET(request: Request): Promise<Response> {
         "content-type": contentType,
         "cache-control": IMMUTABLE,
         "x-render-source": "upstream",
+        ...storeStatus,
       },
     });
   } catch {
