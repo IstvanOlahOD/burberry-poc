@@ -178,17 +178,6 @@ export function RightColumn({
       </div>
 
       <Specification parts={parts} />
-
-      <div className="mt-8">
-        <h3 className="brand-heading mb-3">Details</h3>
-        <p className="brand-label mb-2 text-foreground">
-          The image serves as an indication, and the final product may have small
-          differences in the shades of color or material.
-        </p>
-        <p className="brand-label text-foreground">
-          Once a product is personalized, it cannot be returned.
-        </p>
-      </div>
     </div>
   );
 }

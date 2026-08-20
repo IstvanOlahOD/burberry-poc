@@ -8,6 +8,7 @@ import {
   sameCustomization,
   type Customization,
 } from "@/lib/state";
+import { Details } from "./details";
 import { InitialsModal } from "./initials-modal";
 import { PickerPanel } from "./picker-panel";
 import { RightColumn } from "./right-column";
@@ -104,12 +105,13 @@ export function Customizer({ initial, initialFrame }: CustomizerProps) {
             inset and centres it; the rails hold 250px and the viewer column
             takes whatever is left. */}
         <div className="flex w-full max-w-[1512px] pl-3">
-          <aside className="w-[250px] shrink-0 pt-[46px] pb-[53px]">
+          <aside className="flex w-[250px] shrink-0 flex-col pt-[46px] pb-[53px]">
             <Thumbnails
               parts={current.parts}
               index={index}
               onIndexChange={setIndex}
             />
+            <Details />
           </aside>
 
           <Viewer
