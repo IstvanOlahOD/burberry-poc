@@ -12,10 +12,10 @@ function StartOverBody({ onConfirm }: { onConfirm: () => void }) {
 
   return (
     <>
-      <h4 className="text-center text-[16px] font-medium text-ink">
+      <h4 className="brand-label-lg text-center text-ink">
         You&rsquo;re about to start a new customization.
       </h4>
-      <p className="mx-auto mt-4 max-w-[420px] text-center text-[12px] leading-[18px] text-foreground">
+      <p className="brand-label mx-auto mt-4 max-w-[420px] text-center text-muted">
         By starting a customization the current configuration is going to be reverted. You
         won&rsquo;t be able to recover it.
       </p>
@@ -24,7 +24,7 @@ function StartOverBody({ onConfirm }: { onConfirm: () => void }) {
         <button
           type="button"
           onClick={close}
-          className="label-caps h-11 border border-hairline text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white w-[250px]"
+          className="brand-label-lg h-10 border border-hairline text-ink transition-colors duration-200 ease-[var(--ease-editorial)] hover:border-ink hover:bg-stage w-[250px]"
         >
           Continue customizing
         </button>
@@ -34,7 +34,7 @@ function StartOverBody({ onConfirm }: { onConfirm: () => void }) {
             onConfirm();
             close();
           }}
-          className="label-caps h-11 border border-ink bg-ink text-white transition-colors duration-300 ease-[var(--ease-editorial)] hover:bg-[#2e2e2e] w-[250px]"
+          className="brand-label-lg h-10 border border-knight bg-knight text-white transition-colors duration-200 ease-[var(--ease-editorial)] hover:bg-[#000399] w-[250px]"
         >
           Reset customization
         </button>

@@ -65,7 +65,7 @@ function InitialsForm({
       <div>
         <label
           htmlFor="initials"
-          className="mb-[10px] block text-[14px] leading-4 font-medium text-[#1d1d1d]"
+          className="brand-label mb-[10px] block text-ink"
         >
           Initials
         </label>
@@ -75,7 +75,7 @@ function InitialsForm({
           onChange={(event) => setDraft(normalizeInitials(event.target.value))}
           placeholder="Add initials"
           maxLength={INITIALS_MAX}
-          className="h-11 w-full border border-hairline bg-white px-[14px] py-px text-[16px] tracking-[0.08em] text-ink transition-colors duration-200 ease-[var(--ease-editorial)] placeholder:tracking-normal placeholder:text-muted focus:border-ink focus:outline-none"
+          className="h-11 w-full border border-hairline bg-white px-[14px] py-px brand-label-lg text-ink transition-colors duration-200 ease-[var(--ease-editorial)] placeholder:text-muted focus:border-ink focus:outline-none"
         />
       </div>
 
@@ -83,7 +83,7 @@ function InitialsForm({
         <button
           type="button"
           onClick={() => setDraft("")}
-          className="label-caps h-11 border border-hairline text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white w-[250px]"
+          className="brand-label-lg h-10 border border-hairline text-ink transition-colors duration-200 ease-[var(--ease-editorial)] hover:border-ink hover:bg-stage w-[250px]"
         >
           Clear initials
         </button>
@@ -93,7 +93,7 @@ function InitialsForm({
             onApply(draft);
             close();
           }}
-          className="label-caps h-11 border border-ink bg-ink text-white transition-colors duration-300 ease-[var(--ease-editorial)] hover:bg-[#2e2e2e] w-[250px]"
+          className="brand-label-lg h-10 border border-knight bg-knight text-white transition-colors duration-200 ease-[var(--ease-editorial)] hover:bg-[#000399] w-[250px]"
         >
           Apply
         </button>

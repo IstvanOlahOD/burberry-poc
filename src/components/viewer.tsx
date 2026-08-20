@@ -255,8 +255,16 @@ export function Viewer({
     /* The columns row is as tall as the right column, which now runs past the
        viewport — centring inside it pushed the garment below the fold and behind
        the picker. Sticking to the top and sizing against the visible area keeps
-       the whole coat in view while the specification scrolls past it. */
-    <div className="sticky top-0 flex h-[calc(100dvh-var(--picker-height))] min-w-0 flex-1 items-center justify-center self-start">
+       the whole coat in view while the specification scrolls past it; the
+       masthead is subtracted alongside the picker so a sticky header does not
+       crop the hem.
+
+       The stage stays on the page white. Burberry does sit product imagery on
+       #f6f6f6, but there that panel is full-bleed to the viewport edge; bounded
+       by a white rail on either side, as it would be here, it reads as a stray
+       grey box rather than a ground. The contact shadow is what grounds the
+       coat. */
+    <div className="sticky top-[var(--header-height)] flex h-[calc(100dvh-var(--picker-height)-var(--header-height))] min-w-0 flex-1 items-center justify-center self-start">
       <div
         ref={containerRef}
         onPointerDown={onPointerDown}
@@ -328,11 +336,14 @@ export function Viewer({
             showHint ? "opacity-100" : "opacity-0"
           }`}
         >
-          <span className="absolute inset-x-0 top-0 text-center text-[10px] leading-[13px] font-semibold tracking-[2px] text-[#afafaf] uppercase">
+          {/* Untracked and in sentence case, like every other label on the site;
+              the source's 2px-tracked semibold caps was the loudest remaining
+              piece of non-brand type on the stage. */}
+          <span className="brand-label absolute inset-x-0 top-0 text-center text-[11px] leading-[13px] text-[#a6a6a6]">
             Drag
           </span>
-          <DragHintGraphic className="absolute -top-[42px] left-1/2 h-[77px] w-[543px] max-w-full -translate-x-1/2 text-[#afafaf]" />
-          <span className="absolute inset-x-0 bottom-0 text-center text-[10px] leading-[13px] font-semibold tracking-[2px] text-[#afafaf] uppercase">
+          <DragHintGraphic className="absolute -top-[42px] left-1/2 h-[77px] w-[543px] max-w-full -translate-x-1/2 text-[#a6a6a6]" />
+          <span className="brand-label absolute inset-x-0 bottom-0 text-center text-[11px] leading-[13px] text-[#a6a6a6]">
             3D
           </span>
         </div>

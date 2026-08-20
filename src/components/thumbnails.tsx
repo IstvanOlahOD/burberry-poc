@@ -24,9 +24,10 @@ export function Thumbnails({ parts, index, onIndexChange }: ThumbnailsProps) {
 
   return (
     <div className="flex w-[250px] flex-col">
-      {/* The rail was three unlabelled images. A caps header names it, and the
-          active view gets an ink marker rather than relying on opacity alone. */}
-      <h2 className="label-caps mb-4 text-muted">Views</h2>
+      {/* The rail was three unlabelled images. A serif header names it — the
+          same 20px/24px the brand gives every section title — and the active
+          view gets an ink marker rather than relying on opacity alone. */}
+      <h2 className="brand-heading mb-3">Views</h2>
       {THUMBNAIL_FRAMES.map((frame, position) => {
         const target = frameIndex(frame);
         const active = target === index;

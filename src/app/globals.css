@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
-/* Neutrals are warmed a few degrees off the source's flat greys, which reads
-   closer to print and stops the page feeling like default UI. The geometry of
-   the replica is untouched; only the surface moved. */
+/* Tokens measured from us.burberry.com (homepage + trench coat PDP), not
+   invented. The brand surface is pure black on white with a #f6f6f6 stage
+   behind product imagery — no warm greys, no tinting. */
 :root {
-  --background: #faf9f7;
-  --foreground: #4a4744;
-  --ink: #151515;
-  --muted: #a8a29b;
-  --hairline: #e4e0da;
-  --swatch-ring: #6d6d6d;
+  --background: #ffffff;
+  /* The grey Burberry sits product imagery on. Used here only as the hover fill
+     for secondary controls: as a panel behind the garment it needed to bleed to
+     the viewport edge the way theirs does, and bounded by a white rail on either
+     side it just read as a stray grey box. */
+  --stage: #f6f6f6;
+  --foreground: #000000;
+  --ink: #000000;
+  --muted: #767676;
+  --hairline: #dedede;
+  --swatch-ring: #000000;
+  /* Knight blue: the only accent on the site, reserved for the primary action
+     in a dialog. Measured as rgb(0, 6, 207) on "Add to Bag". */
+  --knight: #0006cf;
 
   /* A single decelerating curve for everything that enters or settles, so the
      motion reads as one system rather than per-component guesses. */
@@ -18,17 +26,22 @@
   /* Collapsed height of the fixed picker panel. The viewer subtracts it so the
      garment is never hidden behind the bar. */
   --picker-height: 55px;
+  /* The Burberry masthead is 64px. The viewer subtracts this too, and the column
+     rails offset against it, so adding the header did not push the stage down. */
+  --header-height: 64px;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-stage: var(--stage);
   --color-foreground: var(--foreground);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-hairline: var(--hairline);
   --color-swatch-ring: var(--swatch-ring);
-  --font-sans: var(--font-roboto);
-  --font-serif: var(--font-cormorant);
+  --color-knight: var(--knight);
+  --font-sans: var(--font-sans-brand);
+  --font-serif: var(--font-serif-brand);
   --ease-editorial: var(--ease-editorial);
 }
 
@@ -42,22 +55,55 @@
     cursor: pointer;
   }
 
-  /* Keyboard users get a visible focus ring; pointer users see nothing extra.
-     A hairline outline set off from the control suits the type better than the
-     default heavy ring. */
+  /* Keyboard users get a visible focus ring; pointer users see nothing extra. */
   :focus-visible {
     outline: 1px solid var(--ink);
     outline-offset: 3px;
   }
 }
 
-/* Small caps-style labels: the main lever for a considered feel, since wide
-   tracking on short uppercase text reads as editorial rather than as UI. */
-.label-caps {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+/* ---------------------------------------------------------------------------
+   Type scale.
+
+   Burberry runs on two roles and almost nothing else. Measured across the
+   homepage and a PDP: every heading, nav item, section title and even the price
+   is the serif at 20px/24px weight 400; everything functional is the sans at
+   14-16px weight 350. Nothing on the site is uppercased and nothing is tracked
+   — letter-spacing was `normal` and text-transform `none` on all 845 rendered
+   elements sampled. The previous `.label-caps` (11px, uppercase, 0.14em) was
+   the single biggest reason this page did not read as the brand.
+   --------------------------------------------------------------------------- */
+
+/* Product titles, section headings, part names, price. */
+.brand-heading {
+  font-family: var(--font-serif-brand), Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+}
+
+/* Buttons, form labels, specification rows, swatch names. */
+.brand-label {
+  font-family: var(--font-sans-brand), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 350;
+  line-height: 20px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* The dialog and CTA size, one step up from .brand-label — matching the 16px
+   weight 350 of "Add to Bag". */
+.brand-label-lg {
+  font-family: var(--font-sans-brand), system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 350;
+  line-height: 24px;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 html,
@@ -68,8 +114,9 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-roboto), Roboto, Lato, "Source Sans Pro", sans-serif;
+  font-family: var(--font-sans-brand), system-ui, -apple-system, sans-serif;
   font-size: 14px;
+  font-weight: 350;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -84,13 +131,12 @@ body {
   display: none;
 }
 
-/* Modal chrome, matching the source configurator's dialogs. The enter runs as a
-   CSS animation so no state flip is needed on mount; the leave is driven by a
-   class the dialog sets before it unmounts. */
+/* Modal chrome. Square, opaque white, hairline-bordered — the brand surface
+   treatment rather than the soft lifted card this had before. */
 .modal-root {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,7 +146,7 @@ body {
 .modal-overlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(21, 21, 21, 0.43);
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 .modal-container {
@@ -112,12 +158,8 @@ body {
   overflow-y: auto;
   padding: 0 40px;
   background-color: #fff;
-  /* Squared off, and lifted on a soft two-stage shadow rather than the source's
-     single flat blur — the panel should feel placed rather than pasted. */
+  border: 1px solid var(--hairline);
   border-radius: 0;
-  box-shadow:
-    0 24px 64px -16px rgba(21, 21, 21, 0.3),
-    0 2px 8px rgba(21, 21, 21, 0.05);
   text-align: left;
 }
 
@@ -141,25 +183,25 @@ body {
   background-color: #2e2e2e;
 }
 
-/* The dialog title carries the identity: a high-contrast serif at a light
-   weight, against the sans everywhere else. */
+/* Dialog titles sit at the same 20px/24px serif as every other heading on the
+   site. The 40px light display serif that was here has no counterpart anywhere
+   on burberry.com — their largest heading, including the homepage hero, is
+   20px. */
 .modal-title {
   margin-bottom: 4px;
-  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
-  font-size: 40px;
-  font-weight: 300;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
+  font-family: var(--font-serif-brand), Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 24px;
   text-align: center;
   color: var(--ink);
 }
 
-/* A hairline under the title, inset from the edges, to separate the heading
-   from the controls without a heavy divider. */
 .modal-rule {
   width: 56px;
   height: 1px;
-  margin: 18px auto 0;
+  margin: 16px auto 0;
   background-color: var(--hairline);
 }
 
@@ -236,7 +278,8 @@ body {
 
 /* Contact shadow beneath the garment. The renders carry alpha, so a shape behind
    the image reads as a shadow on the ground rather than a box. Positioned to the
-   hem, which sits a little above the foot of the square. */
+   hem, which sits a little above the foot of the square. Neutral black now that
+   the stage behind it is a cool grey rather than a warm off-white. */
 .viewer-contact-shadow {
   position: absolute;
   bottom: 9%;
@@ -246,9 +289,9 @@ body {
   transform: translateX(-50%);
   background: radial-gradient(
     50% 50% at 50% 50%,
-    rgba(21, 21, 21, 0.17) 0%,
-    rgba(21, 21, 21, 0.06) 48%,
-    rgba(21, 21, 21, 0) 72%
+    rgba(0, 0, 0, 0.14) 0%,
+    rgba(0, 0, 0, 0.05) 48%,
+    rgba(0, 0, 0, 0) 72%
   );
   filter: blur(4px);
   pointer-events: none;

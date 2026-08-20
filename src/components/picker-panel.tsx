@@ -29,7 +29,11 @@ export function PickerPanel({
     materials[0];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 border-t border-hairline bg-[rgba(250,249,247,0.88)] backdrop-blur-md">
+    /* Opaque white over a hairline. The translucent, blurred panel this had
+       before is an app idiom — every surface on burberry.com is flat and opaque,
+       separated by a 1px #dedede rule, and the blur was also softening the hem
+       of the garment behind it. */
+    <div className="fixed inset-x-0 bottom-0 z-10 border-t border-hairline bg-background">
       <button
         type="button"
         onClick={onClose}
@@ -58,17 +62,19 @@ export function PickerPanel({
                     isActive ? "after:opacity-100" : "after:opacity-0"
                   }`}
                 >
+                  {/* Part names are navigation, and Burberry sets navigation in
+                      the serif at 16px — not tracked medium-weight sans. */}
                   <span
-                    className={`text-[14px] font-medium tracking-[0.05em] transition-colors duration-100 ease-in-out group-hover:text-[#151515] ${
-                      isActive ? "text-[#151515]" : "text-muted"
+                    className={`font-serif text-[16px] leading-5 font-normal transition-colors duration-150 group-hover:text-ink ${
+                      isActive ? "text-ink" : "text-muted"
                     }`}
                   >
                     {selection || !part.optional ? part.label : `No ${part.label}`}
                   </span>
                   {selection ? (
                     <span
-                      className={`ml-2 inline-block size-[13px] overflow-hidden rounded-full border transition-colors duration-100 ease-in-out group-hover:border-swatch-ring ${
-                        isActive ? "border-swatch-ring" : "border-[#9299a3]"
+                      className={`ml-2 inline-block size-[13px] overflow-hidden rounded-full border transition-colors duration-150 group-hover:border-swatch-ring ${
+                        isActive ? "border-swatch-ring" : "border-hairline"
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- remote swatch render. */}
@@ -104,7 +110,7 @@ export function PickerPanel({
                         color: material.colors[0].name,
                       })
                     }
-                    className={`text-[12px] font-medium transition-colors duration-100 ease-in-out hover:text-ink ${
+                    className={`brand-label transition-colors duration-150 hover:text-ink ${
                       material.name === currentMaterial?.name ? "text-ink" : "text-muted"
                     }`}
                   >
@@ -152,10 +158,8 @@ export function PickerPanel({
                         />
                       </span>
                       <span
-                        className={`mt-[18px] block text-[12px] leading-[14px] font-medium tracking-[0.06em] transition-colors duration-100 ease-in-out ${
-                          isActive
-                            ? "text-[#151515]"
-                            : "text-muted group-hover:text-[#151515]"
+                        className={`brand-label mt-[18px] block transition-colors duration-150 ${
+                          isActive ? "text-ink" : "text-muted group-hover:text-ink"
                         }`}
                       >
                         {color.label}
@@ -174,17 +178,15 @@ export function PickerPanel({
                     className="group block w-full"
                   >
                     <span
-                      className={`mx-auto block size-[50px] rounded-full border border-dashed border-[#bbb] ${
+                      className={`mx-auto block size-[50px] rounded-full border border-dashed border-hairline ${
                         currentSelection
                           ? "transition-transform duration-[125ms] ease-in-out group-hover:scale-[1.08]"
                           : "scale-[1.2] transition-transform duration-200 ease-out"
                       }`}
                     />
                     <span
-                      className={`mt-[18px] block text-[12px] leading-[14px] font-medium tracking-[0.06em] transition-colors duration-100 ease-in-out ${
-                        currentSelection
-                          ? "text-muted group-hover:text-[#151515]"
-                          : "text-[#151515]"
+                      className={`brand-label mt-[18px] block transition-colors duration-150 ${
+                        currentSelection ? "text-muted group-hover:text-ink" : "text-ink"
                       }`}
                     >
                       No {active.label}

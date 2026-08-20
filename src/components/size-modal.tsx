@@ -28,10 +28,10 @@ function SizeForm({ size, onSelect }: { size: number; onSelect: (size: number) =
                   type="button"
                   onClick={() => setDraft(native)}
                   aria-pressed={active}
-                  className={`size-[58px] border text-[16px] font-normal tracking-[0.02em] transition-colors duration-200 ease-[var(--ease-editorial)] ${
+                  className={`brand-label-lg size-[58px] border transition-colors duration-200 ease-[var(--ease-editorial)] ${
                     active
                       ? "border-ink bg-ink text-white"
-                      : "border-hairline bg-white text-ink hover:border-ink"
+                      : "border-hairline bg-white text-ink hover:border-ink hover:bg-stage"
                   }`}
                 >
                   {sizeLabel(native)}
@@ -49,7 +49,7 @@ function SizeForm({ size, onSelect }: { size: number; onSelect: (size: number) =
             onSelect(draft);
             close();
           }}
-          className="label-caps h-11 border border-ink bg-ink text-white transition-colors duration-300 ease-[var(--ease-editorial)] hover:bg-[#2e2e2e] w-[46%]"
+          className="brand-label-lg h-10 border border-knight bg-knight text-white transition-colors duration-200 ease-[var(--ease-editorial)] hover:bg-[#000399] w-[46%]"
         >
           Select
         </button>

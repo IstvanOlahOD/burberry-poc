@@ -32,6 +32,13 @@ type RightColumnProps = {
   onFullscreen: () => void;
 };
 
+/**
+ * A secondary control in the brand's idiom: 40px — the height of "Add to Bag"
+ * on a PDP — square, hairline-bordered, label in the sans at weight 350 in
+ * sentence case. The previous version filled to solid black on hover, which is
+ * how the brand marks a *primary* action; a secondary control settling onto the
+ * #f6f6f6 stage grey is the quieter, more accurate move.
+ */
 function OutlinedButton({
   children,
   onClick,
@@ -45,11 +52,9 @@ function OutlinedButton({
     <button
       type="button"
       onClick={onClick}
-      /* Squared with a hairline edge, and the hover fills to ink rather than
-         tinting — a definite state change reads more considered than a wash. */
-      className="group mb-[10px] flex h-[46px] w-full items-center justify-between border border-hairline px-5 text-ink transition-colors duration-300 ease-[var(--ease-editorial)] hover:border-ink hover:bg-ink hover:text-white"
+      className="mb-[10px] flex h-10 w-full items-center justify-between border border-hairline px-4 text-ink transition-colors duration-200 ease-[var(--ease-editorial)] hover:border-ink hover:bg-stage"
     >
-      <span className="label-caps">{children}</span>
+      <span className="brand-label">{children}</span>
       {trailing}
     </button>
   );
@@ -82,31 +87,24 @@ function IconButton({
 }
 
 /**
- * Reads the configuration back as a specification list. The column had a lot of
- * empty space below Details, and a spec sheet is what a considered product page
- * puts there — it also means the current choices are legible without opening
- * the picker.
+ * Reads the configuration back as a specification list, in the shape of the
+ * "Product Details" block on a Burberry PDP: a serif heading over hairline-
+ * separated rows, label in grey and value in black, both in the sans at 350.
  */
 function Specification({ parts }: { parts: Parts }) {
   return (
-    <div className="mt-6 border-t border-hairline pt-5">
-      <h3 className="label-caps mb-1 text-ink">Specification</h3>
+    <div className="mt-8">
+      <h3 className="brand-heading mb-2">Specification</h3>
       <dl>
         {PARTS.map((part) => {
           const chosen = selectionLabel(part.name, parts[part.name] ?? null);
           return (
             <div
               key={part.name}
-              className="flex items-baseline justify-between border-b border-hairline py-[7px] last:border-b-0"
+              className="flex items-baseline justify-between border-b border-hairline py-2 last:border-b-0"
             >
-              <dt className="text-[12px] tracking-[0.04em] text-foreground">
-                {part.label}
-              </dt>
-              <dd
-                className={`text-[12px] tracking-[0.04em] ${
-                  chosen ? "text-ink" : "text-muted"
-                }`}
-              >
+              <dt className="brand-label text-muted">{part.label}</dt>
+              <dd className={`brand-label ${chosen ? "text-ink" : "text-muted"}`}>
                 {chosen ?? "None"}
               </dd>
             </div>
@@ -135,31 +133,32 @@ export function RightColumn({
 }: RightColumnProps) {
   return (
     <div className="w-full">
-      {/* The page never named the garment. A configurator without a product
-          title reads as a tool; with one it reads as a product page. */}
-      <div className="mb-7">
-        <h1 className="font-serif text-[30px] leading-[1.1] font-light text-ink">
-          {MODEL_TITLE}
-        </h1>
-        <p className="label-caps mt-[10px] text-muted">{MODEL_SUBTITLE}</p>
+      {/* The product title sits at the same 20px/24px serif as a PDP h1 — the
+          brand does not scale headings up for emphasis, and the 30px light serif
+          that was here read as a different house entirely. */}
+      <div className="mb-6">
+        <h1 className="brand-heading">{MODEL_TITLE}</h1>
+        <p className="brand-label mt-1 text-muted">{MODEL_SUBTITLE}</p>
       </div>
 
       <OutlinedButton onClick={onOpenInitials}>
-        {initials ? `Initials - ${initials}` : "Add initials"}
+        {initials ? `Initials — ${initials}` : "Add initials"}
       </OutlinedButton>
 
       <OutlinedButton onClick={onOpenSize}>
-        {`Size - ${fullSizeLabel(size)}`}
+        {`Size — ${fullSizeLabel(size)}`}
       </OutlinedButton>
 
       <OutlinedButton
         onClick={onToggleFilters}
-        trailing={<span className="text-[16px] leading-none">{expanded ? "-" : "+"}</span>}
+        trailing={
+          <span className="brand-label leading-none">{expanded ? "−" : "+"}</span>
+        }
       >
         {expanded ? "Hide filters" : "Show filters"}
       </OutlinedButton>
 
-      <div className="my-4 flex h-[35px] items-center justify-between">
+      <div className="my-3 flex h-[35px] items-center justify-between">
         <div className="flex">
           <IconButton label="Undo" disabled={!canUndo} onClick={onUndo}>
             <UndoIcon className="size-5" />
@@ -180,15 +179,13 @@ export function RightColumn({
 
       <Specification parts={parts} />
 
-      {/* A hairline above the section replaces the bare heading, giving the
-          column a base line to sit on. */}
-      <div className="mt-6 border-t border-hairline pt-5">
-        <h3 className="label-caps mb-[14px] text-ink">Details</h3>
-        <p className="mb-[10px] text-[12px] leading-[18px] text-foreground">
+      <div className="mt-8">
+        <h3 className="brand-heading mb-3">Details</h3>
+        <p className="brand-label mb-2 text-foreground">
           The image serves as an indication, and the final product may have small
           differences in the shades of color or material.
         </p>
-        <p className="text-[12px] leading-[18px] text-foreground">
+        <p className="brand-label text-foreground">
           Once a product is personalized, it cannot be returned.
         </p>
       </div>

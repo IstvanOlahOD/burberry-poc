@@ -1,14 +1,15 @@
 # burberry-poc
 
-A Next.js replica of the Platforme "RIPE White" trench coat configurator, minus the
-site header.
+A Next.js replica of the Platforme "RIPE White" trench coat configurator, dressed in
+Burberry's own interface language rather than the source's.
 
 Reference page:
 `https://ripe-white-sbx.platforme.com/?brand=burberry_tech&model=trench&locale=en_us&format=webp&gender=female&size=30&scale=eu&p=body:gabardine:oxford&p=buttons:buttons:honey&p=lining:lining:honey&p=stitching:stitching:honey`
 
 ## What it does
 
-- Three-column stage: frame thumbnails, turntable viewer, controls column
+- A 64px masthead carrying the wordmark, over a three-column stage: frame
+  thumbnails, turntable viewer, controls column
 - 72-frame drag rotation over the `side` face, at the same ~6px-per-frame
   sensitivity as the reference, with the rest of the turntable warmed in the
   background one frame at a time
@@ -16,6 +17,76 @@ Reference page:
   label patch, each with its swatch rail and a "No <part>" option
 - Initials, size (EU 35–42), undo/redo, start over, fullscreen and show/hide filters
 - The query string tracks the customization, so a configuration stays shareable
+
+## Brand system
+
+The interface language is measured from `us.burberry.com` — the homepage and a
+trench coat PDP — rather than inferred. Sampling every rendered element that
+carries its own text, the brand turns out to be far more restrained than a
+"luxury configurator" instinct suggests:
+
+| | Value |
+| --- | --- |
+| Headings, nav, part names, price | Serif, weight 400, **20px/24px** (16px for nav) |
+| Buttons, labels, body, spec rows | Sans, weight **350**, 14–16px |
+| Text | `#000` |
+| Page | `#fff` |
+| Secondary-control hover | `#f6f6f6` — the grey their PDPs put product imagery on |
+| Hairline | `1px solid #dedede` |
+| Primary action | `#0006cf` — Knight blue, the site's only accent |
+| `letter-spacing` | `normal`, on all 845 elements sampled |
+| `text-transform` | `none`, on all 845 elements sampled |
+| `border-radius` | `0` |
+
+Two findings drove the work. First, **nothing is uppercased or letterspaced
+anywhere on burberry.com.** An earlier pass here had leaned on 11px uppercase
+labels tracked at `0.14em` for every button and section heading, on the
+assumption that wide small caps read as editorial. Against the real brand they
+read as someone else's. Second, **the brand leads with its serif and demotes the
+sans to utility** — the opposite of this build, which set the whole interface in
+Roboto and reserved a serif for dialog titles at 40px, a size that appears
+nowhere on their site.
+
+So the page now runs on three type roles and nothing else, defined in
+[`globals.css`](src/app/globals.css) as `.brand-heading`, `.brand-label` and
+`.brand-label-lg`.
+
+### The faces
+
+The brand's own fonts are self-hosted from [`src/app/fonts`](src/app/fonts) and
+registered with `next/font/local` in [`layout.tsx`](src/app/layout.tsx). The
+wordmark is their served artwork, in
+[`burberry-wordmark.tsx`](src/components/burberry-wordmark.tsx).
+
+> **These are Burberry's assets, not ours.** The fonts are licensed to them and
+> the wordmark is their trademark. They are appropriate in a POC built for
+> Burberry; they must not be copied into another project, and anything
+> public-facing needs their sign-off.
+
+The 190 `@font-face` rules their site declares resolve to only three files:
+
+| File | Family | Weights | Size |
+| --- | --- | --- | --- |
+| `burberry-house-regular.woff2` | BurberrySerif | 300, 400, 500, 700 | 30 KB |
+| `burberry-oracle-book.woff2` | BurberrySansSerif | 300, 350, 400 | 59 KB |
+| `oracle-book-medium.woff2` | BurberrySansSerif | 500, 700 | 64 KB |
+
+So **the serif is a single cut** that every weight points at, and the sans has
+exactly two — Oracle Book and Oracle Book Medium. Verified in the browser after
+forcing every declared weight to load: all five serif weights render at identical
+widths, the sans 300/350/400 group is identical, 500/700 is identical, and the two
+sans groups differ from each other.
+
+Those aliases are reproduced here rather than collapsed to one weight each,
+because it matches what the brand declares — and because pointing 700 at the
+regular cut is what stops a stray `font-bold` on serif text from asking the
+browser to synthesise a bold the brand does not own.
+
+One correction to an earlier draft of this file: weight 350 is **not** a
+variable-font axis position. It is a plain alias onto the same static Book file
+as 400, so it renders identically to 400 — the distinction is nominal, not
+optical. Keeping the interface on 350 is still right, because that is the weight
+the brand names.
 
 ## Product imagery
 
@@ -86,6 +157,13 @@ the page background:
 | 50 | 15.5 KB | −68% | 1.72 |
 | **70** | **23.9 KB** | **−51%** | **1.14** |
 | 80 | 29.9 KB | −38% | 0.94 |
+
+Those figures were measured when the page background was a warm `#faf9f7`; it is
+now `#ffffff`. That is a small enough move to leave the ranking intact and
+quality 70 is still the right pick, though the numbers are worth re-taking if the
+encoder is ever revisited. Note that changing the background does **not** call
+for a `RENDER_REVISION` bump: the bytes behind a render URL are unchanged, only
+what they composite over.
 
 Resolution follows the display. The viewer box is 720 CSS px, so a flat 1000
 over-fetched on 1x and under-sampled on 2x; both are offered via `srcSet`
