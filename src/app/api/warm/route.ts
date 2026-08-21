@@ -42,8 +42,13 @@ type Outcome = {
   status: number;
   cache: string;
   source: string;
-  /** First segment of `x-vercel-id` — the edge PoP that served it. */
-  pop: string;
+  /**
+   * `x-vercel-id` verbatim. Not parsed: the separator convention varies with how
+   * many hops a request took, and guessing at it produced a value
+   * (`fra1:lhr1`) that could not be read either way. The raw header is the only
+   * trustworthy evidence of which edge served the request.
+   */
+  vercelId: string;
   bytes: number;
 };
 
@@ -60,7 +65,7 @@ async function warmOne(url: string): Promise<Outcome> {
       status: response.status,
       cache: response.headers.get("x-vercel-cache") ?? "n/a",
       source: response.headers.get("x-render-source") ?? "n/a",
-      pop: (response.headers.get("x-vercel-id") ?? "n/a").split("::")[0],
+      vercelId: response.headers.get("x-vercel-id") ?? "n/a",
       bytes: body.byteLength,
     };
   } catch (error) {
@@ -69,7 +74,7 @@ async function warmOne(url: string): Promise<Outcome> {
       status: 0,
       cache: "error",
       source: error instanceof Error ? error.message.slice(0, 60) : "error",
-      pop: "n/a",
+      vercelId: "n/a",
       bytes: 0,
     };
   }
@@ -144,11 +149,22 @@ export async function GET(request: Request): Promise<Response> {
   const started = Date.now();
   const results = await pool(batch, CONCURRENCY, warmOne);
 
-  const tally = (key: "cache" | "source" | "pop") =>
+  const tally = (key: "cache" | "source") =>
     results.reduce<Record<string, number>>((acc, result) => {
       acc[result[key]] = (acc[result[key]] ?? 0) + 1;
       return acc;
     }, {});
+
+  /**
+   * The routing prefix of `x-vercel-id` — everything bar the final segment, which
+   * is a per-request id and would otherwise give one bucket per row. The prefix
+   * names the PoPs the request passed through, which is what we are measuring.
+   */
+  const routes = results.reduce<Record<string, number>>((acc, result) => {
+    const route = result.vercelId.replace(/::[^:]*$/, "");
+    acc[route] = (acc[route] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const failed = results.filter((result) => !result.ok);
 
@@ -161,8 +177,9 @@ export async function GET(request: Request): Promise<Response> {
       remaining: Math.max(0, list.count - (offset + batch.length)),
       warmed: results.length - failed.length,
       failed: failed.length,
-      // The PoP tally is the point: it is the proof of which edge was filled.
-      pop: tally("pop"),
+      // The routing tally is the point: it is the evidence of which edge was hit.
+      routes,
+      sampleIds: results.slice(0, 3).map((result) => result.vercelId),
       cache: tally("cache"),
       source: tally("source"),
       bytes: results.reduce((sum, result) => sum + result.bytes, 0),
